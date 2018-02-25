@@ -12,6 +12,6 @@ disparity_sliding_window_test
 Note: Install path has to be in LD_LIBRARY_PATH. For Python:
 
 ```
-PYTHONPATH=PYTHONPATH:"dir_to_dsw_python"
+PYTHONPATH=PYTHONPATH:"dir_to_dsw_python.so"
 import dsw_python
 ```
