@@ -5,7 +5,7 @@
 
 #include <fstream>
 
-SmartSlidingWindow::SmartSlidingWindow(const float &obj_width, const float &obj_height, const float &hyp_aspect, const int &min_hyp_width, const int &max_hyp_width, const int &hyp_class_id, const size_t &max_nans, const float &max_stddev, const float &stepperc) :
+DisparitySlidingWindow::DisparitySlidingWindow(const float &obj_width, const float &obj_height, const float &hyp_aspect, const int &min_hyp_width, const int &max_hyp_width, const int &hyp_class_id, const size_t &max_nans, const float &max_stddev, const float &stepperc) :
     obj_width(obj_width),
     obj_height(obj_height),
     hyp_aspect(hyp_aspect),
@@ -20,11 +20,11 @@ SmartSlidingWindow::SmartSlidingWindow(const float &obj_width, const float &obj_
     lut_adress_factor = 0;
 }
 
-SmartSlidingWindow::~SmartSlidingWindow() {
+DisparitySlidingWindow::~DisparitySlidingWindow() {
 
 }
 
-bool SmartSlidingWindow::initLookUpTable(const double &tx, const cv::Matx33d &camera_matrix, const cv::Mat &distortion_matrix, const float min_disp, const float &max_disp, const float &disp_step) {
+bool DisparitySlidingWindow::initLookUpTable(const double &tx, const cv::Matx33d &camera_matrix, const cv::Mat &distortion_matrix, const float min_disp, const float &max_disp, const float &disp_step) {
 
     // check if inverse disp-step is a multiple of 2
     if (((int)(disp_step/1.))%2 != 0) {
@@ -81,7 +81,7 @@ bool SmartSlidingWindow::initLookUpTable(const double &tx, const cv::Matx33d &ca
     return true;
 }
 
-void SmartSlidingWindow::generate(const cv::Mat_<float> &disparity_image, cv::Mat &dst, std::vector<Rect> &hyps, const double &tx) {
+void DisparitySlidingWindow::generate(const cv::Mat_<float> &disparity_image, cv::Mat &dst, std::vector<Rect> &hyps, const double &tx) {
 
     // check if we're ready to generate
     if (LUT.size() == 0 || lut_adress_factor == 0) {
@@ -172,7 +172,7 @@ void SmartSlidingWindow::generate(const cv::Mat_<float> &disparity_image, cv::Ma
 
 }
 
-void SmartSlidingWindow::inspectHypothesisDepth(const cv::Mat &hyp, float &stddev, size_t &nan_count) {
+void DisparitySlidingWindow::inspectHypothesisDepth(const cv::Mat &hyp, float &stddev, size_t &nan_count) {
 
     // reset output vars
     nan_count = 0;
@@ -224,42 +224,42 @@ void SmartSlidingWindow::inspectHypothesisDepth(const cv::Mat &hyp, float &stdde
 /////////////////////////////////////////////////////////
 // MEMBER SETTER
 /////////////////////////////////////////////////////////
-void SmartSlidingWindow::setHypClassId(const int &id) {
+void DisparitySlidingWindow::setHypClassId(const int &id) {
     hyp.classId = id;
 }
 
-void SmartSlidingWindow::setHypCounter(const size_t &cnt) {
+void DisparitySlidingWindow::setHypCounter(const size_t &cnt) {
     hyp.id = cnt;
 }
 
-void SmartSlidingWindow::setMaxNans(const size_t &cnt) {
+void DisparitySlidingWindow::setMaxNans(const size_t &cnt) {
     max_nans = cnt;
 }
 
-void SmartSlidingWindow::setMaxStddev(const float &val) {
+void DisparitySlidingWindow::setMaxStddev(const float &val) {
     max_stddev = val;
 }
 
-void SmartSlidingWindow::setHypAspect(const float &aspect) {
+void DisparitySlidingWindow::setHypAspect(const float &aspect) {
     hyp_aspect = aspect;
 }
 
-void SmartSlidingWindow::setMinHypWidth(const int &min_w) {
+void DisparitySlidingWindow::setMinHypWidth(const int &min_w) {
     min_hyp_width = min_w;
 }
 
-void SmartSlidingWindow::setMaxHypWidth(const int &max_w) {
+void DisparitySlidingWindow::setMaxHypWidth(const int &max_w) {
     max_hyp_width = max_w;
 }
 
-void SmartSlidingWindow::setObjWidth(const float &val) {
+void DisparitySlidingWindow::setObjWidth(const float &val) {
     obj_width = val;
 }
 
-void SmartSlidingWindow::setObjHeight(const float &val) {
+void DisparitySlidingWindow::setObjHeight(const float &val) {
     obj_height= val;
 }
 
-void SmartSlidingWindow::setStepPercentage(const float &val) {
+void DisparitySlidingWindow::setStepPercentage(const float &val) {
     step_perc= val;
 }

@@ -186,7 +186,7 @@ int main(int argc, char** argv) {
 
     cv::StereoSGBM SGM(min_disparity, num_disparities, window_size, p1, p2, disp_max_diff, prefilter_cap, uniqueness_ratio, speckle_window_size, speckle_range, full_dp);
 
-    SmartSlidingWindow DSW(0.6, 1.73, 2.88, 10, 200, 10, 4, 3.0,0.2);
+    DisparitySlidingWindow DSW(0.6, 1.73, 2.88, 10, 200, 10, 4, 3.0,0.2);
 
     for (size_t i = 0; i< files_left.size(); ++i){
 

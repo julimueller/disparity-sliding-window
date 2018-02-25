@@ -19,11 +19,11 @@ class Rect {
 
 };
 
-class SmartSlidingWindow {
+class DisparitySlidingWindow {
 
 public:
-    SmartSlidingWindow(const float &obj_width, const float &obj_height, const float &hyp_aspect, const int &min_hyp_width, const int &max_hyp_width, const int &hyp_class_id, const size_t &max_nans, const float &max_stddev, const float &stepperc);
-    virtual ~SmartSlidingWindow();
+    DisparitySlidingWindow(const float &obj_width, const float &obj_height, const float &hyp_aspect, const int &min_hyp_width, const int &max_hyp_width, const int &hyp_class_id, const size_t &max_nans, const float &max_stddev, const float &stepperc);
+    virtual ~DisparitySlidingWindow();
 
     bool initLookUpTable(const double &tx, const cv::Matx33d &camera_matrix, const cv::Mat &distortion_matrix, const float min_disp, const float &max_disp, const float &disp_step);
     void generate(const cv::Mat_<float> &disparity_image, cv::Mat &dst, std::vector<Rect> &hyps, const double &tx);
