@@ -1,8 +1,17 @@
-#ifndef _SMART_SLIDING_WINDOW_H_
-#define _SMART_SLIDING_WINDOW_H_
+/**
+    disparity_sliding_window.h
+    Purpose: Declaration of classes and methods needed for calculating object proposals from disparity images
+
+    @author Julian Mueller, University of Ulm
+    @version 1.1 02/03/18
+*/
+
+#ifndef _DISPARITY_SLIDING_WINDOW_H_
+#define _DISPARITY_SLIDING_WINDOW_H_
 
 #include <vector>
 #include <opencv2/core/core.hpp>
+#include <boost/python.hpp>
 
 class Rect {
 
@@ -22,11 +31,12 @@ class Rect {
 class DisparitySlidingWindow {
 
 public:
-    DisparitySlidingWindow(const float &obj_width, const float &obj_height, const float &hyp_aspect, const int &min_hyp_width, const int &max_hyp_width, const int &hyp_class_id, const size_t &max_nans, const float &max_stddev, const float &stepperc);
+    DisparitySlidingWindow(const float &obj_width, const float &obj_height, const float &hyp_aspect, const int &min_hyp_width, const int &max_hyp_width, const int &hyp_class_id, const size_t &max_nans, const float &max_stddev, const float &stepperc, const int &class_type);
     virtual ~DisparitySlidingWindow();
 
-    bool initLookUpTable(const double &tx, const cv::Matx33d &camera_matrix, const cv::Mat &distortion_matrix, const float min_disp, const float &max_disp, const float &disp_step);
-    void generate(const cv::Mat_<float> &disparity_image, cv::Mat &dst, std::vector<Rect> &hyps, const double &tx);
+    bool initLookUpTable(const float &tx, const cv::Mat &camera_matrix, const cv::Mat &distortion_matrix, const float &min_disp, const float &max_disp, const float &disp_step);
+    void generate(const cv::Mat &disparity_image, cv::Mat &dst, std::vector<Rect> &hyps, const float &tx);
+    boost::python::list generate_py(const cv::Mat &disparity_image, const float &tx);
 
     void setHypCounter(const size_t &cnt);
     void setMaxNans(const size_t &cnt);
@@ -39,6 +49,11 @@ public:
     void setObjHeight(const float &val);
     void setStepPercentage(const float &val);
 
+    enum HOMOGENEITY_VERIFICATION {
+        TRAFFIC_LIGHT=0,
+        PEDESTRIAN=1
+    };
+
 private:
 
     void inspectHypothesisDepth(const cv::Mat &hyp, float &stddev, size_t &nan_count);
@@ -49,6 +64,7 @@ private:
     int min_hyp_width;
     int max_hyp_width;
     int hyp_class_id;
+    int class_type;
 
     size_t max_nans;
     float max_stddev;
@@ -59,6 +75,9 @@ private:
     int lut_adress_factor;
     std::vector<Rect> LUT;
 
+    int homogeneity_verification_method;
+
+
 };
 
-#endif // _SMART_SLIDING_WINDOW_H_
+#endif // _DISPARITY_SLIDING_WINDOW_H_

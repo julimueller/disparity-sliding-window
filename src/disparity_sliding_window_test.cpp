@@ -1,9 +1,20 @@
+/**
+    disparity_sliding_window_test.cpp
+    Purpose: Test Disparity Sliding Window on pedestrian detection
+
+    @author Julian Mueller, University of Ulm
+    @version 1.1 02/03/18
+*/
+
+
 #include <disparity_sliding_window.h>
 #include <vector>
 #include <opencv2/opencv.hpp>
 #include <dirent.h>
 #include <fstream>
+#include <iomanip> // setprecision
 
+//////////////// ORIGINAL CODE FROM KITTI /////////////////////////
 int getdir (std::string dir, std::vector<std::string> &files)
 {
 
@@ -34,6 +45,7 @@ struct tBox {
   tBox (std::string type, double x1,double y1,double x2,double y2,double alpha) :
     type(type),x1(x1),y1(y1),x2(x2),y2(y2),alpha(alpha) {}
 };
+
 // holding ground truth data
 struct tGroundtruth {
   tBox    box;        // object type, box, orientation
@@ -49,7 +61,6 @@ struct tGroundtruth {
   tGroundtruth (std::string type,double x1,double y1,double x2,double y2,double alpha,double truncation,int32_t occlusion) :
     box(tBox(type,x1,y1,x2,y2,alpha)),truncation(truncation),occlusion(occlusion) {}
 };
-
 
 std::vector<tGroundtruth> loadGroundtruth(std::string file_name,bool &success) {
 
@@ -77,6 +88,8 @@ std::vector<tGroundtruth> loadGroundtruth(std::string file_name,bool &success) {
   return groundtruth;
 }
 
+//////////////// END ORIGINAL CODE FROM KITTI /////////////////////////
+
 void readCalib(std::string &file_name, cv::Mat &p_left, cv::Mat &p_right, cv::Mat &ro_rect) {
 
     // Load calib file
@@ -89,12 +102,11 @@ void readCalib(std::string &file_name, cv::Mat &p_left, cv::Mat &p_right, cv::Ma
     ro_rect = cv::Mat (3, 3, CV_32FC1);
 
     // Read all lines - one line = one matrix
-    while (std::getline(infile, line))
-    {
+    while (std::getline(infile, line)) {
         std::stringstream ss(line);
         std::string token;
 
-        int i=0;
+        int i = 0;
         std::string first_elem;
         std::vector<float> values;
 
@@ -104,9 +116,7 @@ void readCalib(std::string &file_name, cv::Mat &p_left, cv::Mat &p_right, cv::Ma
             // Check which matrix line contains
             if(i == 0) {
                 first_elem = token;
-                std::cout << first_elem << std::endl;
                 ++i;
-
                 continue;
             }
             else {
@@ -117,26 +127,23 @@ void readCalib(std::string &file_name, cv::Mat &p_left, cv::Mat &p_right, cv::Ma
 
         // Extract left projection matrix
         if (first_elem == "P2:") {
-            for(int i=0;i<p_left.rows*p_left.cols;++i)
-            {
-                p_left.at<float>(i)=values[i];
+            for(int i = 0; i < p_left.rows * p_left.cols; ++i) {
+                p_left.at<float>(i) = values[i];
             }
 
         }
 
         // Extract right projection matrix
         if (first_elem == "P3:") {
-            for(int i=0;i<p_right.rows*p_right.cols;++i)
-            {
-                p_right.at<float>(i)=values[i];
+            for(int i = 0; i < p_right.rows*p_right.cols; ++i) {
+                p_right.at<float>(i) = values[i];
             }
 
         }
 
         // Extract rectification matrix
         if (first_elem == "R0_rect:") {
-            for(int i=0;i<ro_rect.rows*ro_rect.cols;++i)
-            {
+            for(int i = 0; i < ro_rect.rows*ro_rect.cols; ++i) {
                 ro_rect.at<float>(i)=values[i];
             }
 
@@ -151,13 +158,14 @@ float intersectionOverUnion(const int &labelX, const int &labelY, const int &lab
     // TODO: reimplement this if you want to be opencv independend
     cv::Rect l(labelX, labelY, labelW, labelH);
     cv::Rect h(hypX, hypY, hypW, hypH);
-    float i = (l&h).area();
+    float i = (l & h).area();
     float u = l.area() + h.area() - i;
     return (i / u);
 }
 
 int main(int argc, char** argv) {
 
+    // Download the KITTI object detection dataset (http://www.cvlibs.net/datasets/kitti/eval_object.php?obj_benchmark=2d) and modify path
     std::string left_img_dir = "/scratch/fs2/KITTI/data_object_image_2/training/image_2/";
     std::string right_img_dir = "/scratch/fs2/KITTI/data_object_image_3/training/image_3/";
     std::string calib_dir = "/scratch/fs2/KITTI/data_object_calib/training/calib/";
@@ -169,31 +177,47 @@ int main(int argc, char** argv) {
 
     cv::Mat img_left, img_right, disp, disp_viz;
 
+    // sort files by number
     std::sort(files_left.begin(), files_left.end());
 
-    // PARAMETERS FOR SGM
+    // Parameters for SGM
     int min_disparity = 2 ;
-    int num_disparities = 114 - min_disparity ;
+    int max_disparity = 114;
+    int num_disparities =  max_disparity- min_disparity ;
     int window_size = 5 ;
-    int p1 = (8*3*window_size)^2;
-    int p2= (32*3*window_size)^2;
-    int disp_max_diff=1;
-    int prefilter_cap=0;
-    int uniqueness_ratio= 10;
+    int p1 = 8 * 3 * (window_size * window_size);
+    int p2= 32 * 3 * (window_size * window_size);
+    int disp_max_diff = 1;
+    int prefilter_cap = 0;
+    int uniqueness_ratio = 10;
     int speckle_window_size = 100;
-    int speckle_range=32;
-    bool full_dp= false;
+    int speckle_range = 32;
+    bool full_dp = false;
 
+    // Parameters for DSW
+    float world_width = 0.6;
+    float world_height = 1.73;
+    float aspect_ratio = 2.88;
+    int min_width_image = 10;
+    int max_width_image = 200;
+    int class_id = 10;
+    size_t nan_count = 6;
+    float stddev = 0.05;
+    float step_perc = 0.4;
+    int class_type = DisparitySlidingWindow::HOMOGENEITY_VERIFICATION::PEDESTRIAN;
+
+
+    // Constructors for SGM and Disparity Sliding Window
     cv::StereoSGBM SGM(min_disparity, num_disparities, window_size, p1, p2, disp_max_diff, prefilter_cap, uniqueness_ratio, speckle_window_size, speckle_range, full_dp);
+    DisparitySlidingWindow DSW(world_width, world_height, aspect_ratio, min_width_image, max_width_image, class_id, nan_count, stddev, step_perc, class_type);
 
-    DisparitySlidingWindow DSW(0.6, 1.73, 2.88, 10, 200, 10, 4, 3.0,0.2);
+    // For all images
+    for (size_t i = 0; i < files_left.size(); ++i){
 
-    for (size_t i = 0; i< files_left.size(); ++i){
-
-        std::cout << files_left[i] << std::endl;
         size_t lastindex = files_left[i].find_last_of(".");
         std::string rawname = files_left[i].substr(0, lastindex);
 
+        // Get corresponding right image, calib and label files
         std::string right_img_path = right_img_dir + rawname + ".png";
         std::string calib_path = calib_dir + rawname + ".txt";
         std::string label_path = label_dir + rawname + ".txt";
@@ -205,6 +229,7 @@ int main(int argc, char** argv) {
 
         bool contains_ped = false;
 
+        // Check if image contains pedestrian
         for (size_t i = 0; i < gts.size(); ++i) {
 
             if (gts[i].box.type == "Pedestrian") {
@@ -214,8 +239,8 @@ int main(int argc, char** argv) {
             }
         }
 
+        // Continue if image contains pedestrian
         if (contains_ped) {
-
 
             img_left = cv::imread(left_img_path, -1);
             img_right = cv::imread(right_img_path, -1);
@@ -224,27 +249,21 @@ int main(int argc, char** argv) {
             readCalib(calib_path, p_left, p_right, ro_rect);
 
             cv::Mat K, R, t, dist;
-            dist = cv::Mat (1, 4, CV_32FC1, cv::Scalar(0.));
+            dist = cv::Mat (1, 5, CV_32FC1, cv::Scalar(0.));
+
+            // Get camera matrix from projection matrix
             cv::decomposeProjectionMatrix(p_left, K, R, t);
-            std::cout << K << std::endl;
 
-            std::cout << p_left << std::endl;
-            std::cout << p_right << std::endl;
-            std::cout << ro_rect << std::endl;
-
-
-
-
-
+            // Calculate SGM disparity image
             SGM.operator ()(img_left, img_right, disp);
-
             disp.convertTo(disp, CV_32F, 1.0/16.0, 0.0);
 
+            // 1 means invalid
             disp.setTo(std::numeric_limits<float>::quiet_NaN (), disp ==1.0);
 
-
             float tx =  p_right.at<float>(0,3);
-            std::cout << tx << std::endl;
+
+            // Calculate lookup-table (necessary in KITTI because calibration changes, for constant calib only calculate once!)
             DSW.initLookUpTable(tx, K, dist, 0, 114, 1./16. );
             cv::Mat dst;
             std::vector<Rect> hyps;
@@ -254,13 +273,17 @@ int main(int argc, char** argv) {
             double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
 
             std::cout << "Elapsed miliseconds: " << elapsed_secs * 1000.0 << std::endl;
+            // Calculate overlap for all ground truths
             for (size_t i = 0; i < gts.size(); ++i) {
 
+                // Only do pedestrians
                 if (gts[i].box.type == "Pedestrian") {
-                    cv::rectangle(img_left, cv::Rect(gts[i].box.x1, gts[i].box.y1, gts[i].box.x2 - gts[i].box.x1, gts[i].box.y2 -gts[i].box.y1), cv::Scalar(0, 255, 0));
+                    cv::rectangle(img_left, cv::Rect(gts[i].box.x1, gts[i].box.y1, gts[i].box.x2 - gts[i].box.x1, gts[i].box.y2 -gts[i].box.y1), cv::Scalar(0, 255, 0), 2);
 
                     float best_ov = 0.0;
                     int idx_best = 0;
+
+                    // For all hypotheses calculate IoU and remember the best
                     for (size_t j = 0 ;j < hyps.size() ;++j) {
                         float iou = intersectionOverUnion(gts[i].box.x1, gts[i].box.y1, gts[i].box.x2 - gts[i].box.x1, gts[i].box.y2 - gts[i].box.y1, hyps[j].x, hyps[j].y, hyps[j].w, hyps[j].h);
                         if ( iou > best_ov) {
@@ -269,41 +292,25 @@ int main(int argc, char** argv) {
                         }
 
                     }
+                    // Visualize
                     if (best_ov > 0.0) {
-                        cv::rectangle(img_left, cv::Rect(hyps[idx_best].x, hyps[idx_best].y, hyps[idx_best].w, hyps[idx_best].h), cv::Scalar(255, 255, 255));
-
+                        std::stringstream stream;
+                        stream << std::fixed << std::setprecision(2) << best_ov;
+                        std::string s = stream.str();
+                        cv::rectangle(img_left, cv::Rect(hyps[idx_best].x, hyps[idx_best].y, hyps[idx_best].w, hyps[idx_best].h), cv::Scalar(255, 255, 255),2);
+                        cv::putText(img_left, "Best IoU: " + s, cv::Point2d(hyps[idx_best].x  ,hyps[idx_best].y -5 ), CV_FONT_HERSHEY_PLAIN, 1,  cv::Scalar(0,255,0));
                     }
                 }
-
-
             }
 
-            std::cout << hyps.size() << std::endl;
-            double minVal, maxVal;
-            cv::minMaxLoc( disp, &minVal, &maxVal );
-            disp.convertTo( disp_viz, CV_8UC1, 255/(maxVal - minVal));
-            cv::imshow("a", img_left);
+            // Visualize
+            cv::putText(img_left, "Number of Proposals: " + std::to_string(hyps.size()), cv::Point2d(20, 350 ), CV_FONT_HERSHEY_PLAIN, 2,  cv::Scalar(0,255,0));
+            cv::imshow("", img_left);
             cv::waitKey(0);
         }
 
     }
 
-/*
-    for (size_t i = 0; i< files.size(); ++i) {
-
-        std::cout << files[i] << std::endl;
-
-
-
-
-
-        bool success=false;
-        std::cout << left_img_path << std::endl;
-        cv::Mat img_left = cv::imread(left_img_path, -1);
-        cv::imshow("", img_left);
-        cv::waitKey(0);
-
-    }*/
     return 0;
 
 }
