@@ -21,7 +21,7 @@ include_directories( ${Boost_INCLUDE_DIR} )
 INCLUDE_DIRECTORIES(include)
 
 # lib
-SET(SOURCES   src/disparity_sliding_window.cpp src/disparity_sliding_window_test.cpp src/disparity_sliding_window_python.cpp src/kitti_evaluate_object.cpp src/pyboost_cv2_converter.cpp)
+SET(SOURCES   src/disparity_sliding_window.cpp src/disparity_sliding_window_test.cpp src/disparity_sliding_window_python.cpp src/pyboost_cv2_converter.cpp)
 SET(HEADERS   include/disparity_sliding_window.h include/pyboost_cvconverter.hpp)
 ADD_EXECUTABLE(disparity_sliding_window_test ${HEADERS} ${SOURCES})
 
