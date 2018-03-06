@@ -111,7 +111,7 @@ def bb_intersection_over_union( label, hyp):
 
 if __name__ == "__main__":
 
-    # Paths for Kitti Object detection files
+    # Paths for Kitti Object detection files (change path and download from http://www.cvlibs.net/datasets/kitti/eval_object.php?obj_benchmark=2d)
     kittiLeftImagePath = "/scratch/fs2/KITTI/data_object_image_2/training/image_2"
     kittiRightImagePath = "/scratch/fs2/KITTI/data_object_image_3/training/image_3"
     kittiCalibPath = "/scratch/fs2/KITTI/data_object_calib/training/calib"
