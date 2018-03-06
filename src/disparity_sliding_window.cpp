@@ -286,13 +286,11 @@ boost::python::list DisparitySlidingWindow::generate_py(const cv::Mat &disparity
 
         // for cols
         for (int col = 0; col < disparity_image.cols; col = col + step_x_adapt) {
-            std::cout << "loop" << std::endl;
             // check if value is valid
             if ((!(std::isnan(disparity_image.at<float>(row,col)))) && (!(std::isnan(disparity_copy.at<float>(row,col))))) {
 
                 // Get Hyp width from Table (shift sub-decimals away: *lut_adress_factor)
                 hyp = LUT[((int)disparity_image.at<float>(row,col)) * lut_adress_factor];
-                std::cout << hyp.w << std::endl;
                 // Check if proposal larger than minimum width
                 if( hyp.w > min_hyp_width) {
 
