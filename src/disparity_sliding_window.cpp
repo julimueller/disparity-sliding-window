@@ -145,6 +145,7 @@ void DisparitySlidingWindow::generate(const cv::Mat &disparity_image, cv::Mat &d
         return;
     }
 
+
     // adaptive step sizes
     int step_x_adapt = 1;
     int step_y_adapt = 0;
@@ -245,6 +246,143 @@ boost::python::list toPythonList(std::vector<T> vector) {
 }
 
 /**
+    transfer_to_python:     Takes a C++ object via its reference or pointer and transfers the ownership of C++ object to PYTHON
+    @param T*   Pointer to C++ object
+*/
+
+template<typename T>
+boost::python::object transfer_to_python(T *t){
+    std::unique_ptr<T> ptr(t);
+    namespace python = boost::python;
+    typename python::manage_new_object::apply<T*>::type converter;
+    python::handle<> handle(converter(*ptr));
+    ptr.release();
+
+    return python::object(handle);
+}
+
+
+/**
+    toPythonTuple: Converts the vector of rectangles to a list of tuples in python which each tuple keeps (x,y,w,h)
+
+    @param std::vector<Rect>: Vector of rectangles
+    @return: Python tuple list
+
+*/
+boost::python::list toPythonTuple(std::vector<Rect> vector) {
+    typename std::vector<Rect>::iterator iter;
+    boost::python::list tuple_list;
+    for (iter = vector.begin(); iter != vector.end(); ++iter) {
+        boost::python::tuple t = boost::python::make_tuple(iter->x, iter->y, iter->w, iter->h);
+        tuple_list.append(t);
+    }
+    return tuple_list;
+}
+
+/**
+    toPythonRectList:   Takes a std library vector of rectangles as input and returns Python list of Rect class(Rect class is already exported to Python,
+                            for more information see disparity_sliding_window_python.cpp )
+    @param std::vector<Rect>:   Vector of rectangles
+*/
+
+boost::python::list toPythonRectList(std::vector<Rect> vector) {
+    typename std::vector<Rect>::iterator iter;
+    boost::python::list list;
+    for (iter = vector.begin(); iter != vector.end(); ++iter) {
+        list.append(boost::python::object(*iter));
+    }
+    return list;
+}
+
+
+
+/**
+    toPythonRectOwnership: Takes a std library vector of rectangles as input and returns Python list of rectangles but classes are transferred from C++
+                            and ownership is passed from C++ to Python so when lifetime of rectangles are finished on Python side, objects will be deleted
+    @param std::vector<Rect>: Vector of rectangles
+*/
+boost::python::list toPythonRectOwnership(std::vector<Rect> vector) {
+    typename std::vector<Rect>::iterator iter;
+    boost::python::list list;
+    for (iter = vector.begin(); iter != vector.end(); ++iter) {
+        list.append(transfer_to_python<Rect>(&(*iter)));
+    }
+    return list;
+}
+
+
+/**
+    rectToPythonNPArray:    Takes a vector of rectangles as input, creates a C++ Mat object in such a way that each row in the matrix
+                                will keep (x,y,w,h) information of 1 rectangle. The row number will be equal to size of vector and column number will be equal to 4.
+                                Later on, this Mat object is converted to Python ND array and is exported to PYTHON
+    @param std::vector<Rect>: Vector of rectangles
+*/
+boost::python::object rectToPythonNPArray(std::vector<Rect> vector){
+    cv::Mat tmp = cv::Mat::zeros(cv::Size(vector.size(), 4), CV_32FC1);
+
+    for(int i = 0; i<vector.size(); ++i){
+        tmp.at<float>(i, 0) = vector[i].x;
+        tmp.at<float>(i, 1) = vector[i].y;
+        tmp.at<float>(i, 2) = vector[i].w;
+        tmp.at<float>(i, 3) = vector[i].h;
+    }
+
+    boost::python::handle<> handle(pbcvt::fromMatToNDArray(tmp));
+
+    return boost::python::object(handle);
+}
+
+
+
+/**
+    MethodsToConv: After achieving hypotheses,  there are several methods to pass it to Python
+        @OneDList: It will concatenate (x,y,w,h) of rectangles one by one on an integer array and return it as Python list
+        @TupleList: It will return list of Python tuples as each list entry will be tuples of (x,y,w,h) representing 1 rectangle
+        @RectList: It will return list of Rectangles by creating copy of each C++ rectangle to Python since Rect class is exported
+        @TransferOwnership: It will pass the objects of rectangles by transferring ownership from C++ to Python, the output will be list of Rect objects
+
+    fromRectVectToPythonList:   It will either copy the instance of C++ vector or pass it the ownership of vector to Python depending on chosen method
+        @param std::vector<Rect>: Vector of rectangles
+        @param MethodsToConv: The method which is to be chosen for the conversion
+*/
+enum MethodsToConv{ OneDList, TupleList, RectList, TransferOwnership };
+boost::python::list fromRectVectToPythonList(std::vector<Rect> vector, MethodsToConv method){
+    boost::python::list list;
+
+    switch(method){
+    case OneDList:{
+        std::vector<int> hyps_out;
+
+        // convert it to vector int [x,y,w,h,...]
+        for (size_t i=0; i < vector.size(); ++i) {
+            hyps_out.push_back(vector[i].x);
+            hyps_out.push_back(vector[i].y);
+            hyps_out.push_back(vector[i].w);
+            hyps_out.push_back(vector[i].h);
+        }
+        list = toPythonList<int>(hyps_out);
+        break;
+        }
+    case TupleList:{
+        list = toPythonTuple(vector);
+        break;
+    }
+    case RectList:{
+        list = toPythonRectList(vector);
+        break;
+    }
+    case TransferOwnership:{
+        list = toPythonRectOwnership(vector);
+        break;
+    }
+    default:
+        break;
+    }
+
+    return list;
+}
+
+/**
     generate_py:                Calculates object proposals from the disparity input and return python list
 
     @param disparity_image      Disparity image (CV_32FC1)
@@ -253,6 +391,8 @@ boost::python::list toPythonList(std::vector<T> vector) {
 
 */
 boost::python::list DisparitySlidingWindow::generate_py(const cv::Mat &disparity_image, const float &tx) {
+
+    std::cout <<"disparity image size: "<< disparity_image.rows <<" " <<disparity_image.cols << std::endl;
 
     // check if we're ready to generate
     if (LUT.size() == 0 || lut_adress_factor == 0) {
@@ -343,7 +483,10 @@ boost::python::list DisparitySlidingWindow::generate_py(const cv::Mat &disparity
         } // end for cols
     } // end for rows
 
-    std::vector<int> hyps_out;
+
+
+
+    /*std::vector<int> hyps_out;
 
     // convert it to vector int [x,y,w,h,...]
     for (size_t i=0; i < hyps.size(); ++i) {
@@ -354,10 +497,122 @@ boost::python::list DisparitySlidingWindow::generate_py(const cv::Mat &disparity
     }
 
     // std vector int to python list
-    boost::python::list list = toPythonList(hyps_out);
+    boost::python::list list = toPythonList(hyps_out);*/
 
-    return list;
+    return fromRectVectToPythonList(hyps, OneDList);
+
 }
+
+
+
+
+
+/**
+    generate_py_via_mat:                Calculates object proposals from the disparity input and return a Numpy array formed by cv::Mat object
+                                        which each row of Mat will represent (x,y,w,h) of 1 rectangle
+    @param disparity_image      Disparity image (CV_32FC1)
+    @param tx                   Tx = -fx' * B, where fx is the focal length in x and B is the baseline of the stereo camera. See also here: http://docs.ros.org/jade/api/sensor_msgs/html/msg/CameraInfo.html
+    @return                     Python list as list = [x1,y1,w1,h1,x2,y2,w2,h2,...]
+
+*/
+boost::python::object DisparitySlidingWindow::generate_py_via_mat(const cv::Mat &disparity_image, const float &tx) {
+
+    // check if we're ready to generate
+    if (LUT.size() == 0 || lut_adress_factor == 0) {
+        std::cout << "ERROR:\tYou must call 'calculateLookUpTable' before calling 'generate'!" << std::endl;
+        return boost::python::object();
+    }
+
+    // check if disparity image is of type float
+    if (disparity_image.type() != CV_32FC1) {
+        std::cout << "ERROR:\tWe expect a float image as an input!" << std::endl;
+        return boost::python::object();
+    }
+
+    std::vector<Rect> hyps;
+
+    // adaptive step sizes
+    int step_x_adapt = 1;
+    int step_y_adapt = 0;
+
+    float stddev;
+    size_t nan_cnt;
+    float nan_point = std::numeric_limits<float>::quiet_NaN ();
+
+    // we need this to save the step size (pixels we want to jump over)
+    cv::Mat_<float> disparity_copy = disparity_image;
+
+    // for rows
+    for (int row = 0; row < disparity_image.rows; row = row + 1) {
+
+        // for cols
+        for (int col = 0; col < disparity_image.cols; col = col + step_x_adapt) {
+            std::cout << "loop" << std::endl;
+            // check if value is valid
+            if ((!(std::isnan(disparity_image.at<float>(row,col)))) && (!(std::isnan(disparity_copy.at<float>(row,col))))) {
+
+                // Get Hyp width from Table (shift sub-decimals away: *lut_adress_factor)
+                hyp = LUT[((int)disparity_image.at<float>(row,col)) * lut_adress_factor];
+                std::cout << hyp.w << std::endl;
+                // Check if proposal larger than minimum width
+                if( hyp.w > min_hyp_width) {
+
+                    // Step size in percentage
+                    step_x_adapt = std::floor(float(hyp.w * step_perc));
+                    step_y_adapt = std::floor(float(hyp.h * step_perc));
+
+                    // Step size must be >= 1
+                   if (step_x_adapt < 1) {
+                        step_x_adapt = 1;
+                    }
+
+                    if (step_y_adapt < 1) {
+                        step_y_adapt = 1;
+                    }
+
+                    // Remember step size in y-direction in copy image
+                    else {
+                        for (int z = 0; z < step_y_adapt; z++) {
+
+                            if (row + z + 1 < disparity_copy.rows) {
+
+                                disparity_copy.at<float>(row + z + 1,col) = nan_point;
+                            }
+                        }
+                    }
+
+                    // adjust x and y
+                    hyp.x = col - hyp.w/2;
+                    hyp.y = row - hyp.h/2;
+
+                    // Check if hyp is insinde image and hyp_width is in range(min,max)
+                    if (hyp.x > 0 && hyp.y > 0  && ((hyp.x + hyp.w) < disparity_image.cols) && ((hyp.y + hyp.h) < disparity_image.rows) && (hyp.w > min_hyp_width) && (hyp.w < max_hyp_width)) {
+
+                        // Check disparity in Hyp (6 Points)
+                        inspectHypothesisDepth(disparity_image(cv::Rect(hyp.x,hyp.y,hyp.w,hyp.h)), stddev, nan_cnt);
+                        //stddev=0.;
+                        if (stddev < max_stddev && nan_cnt <= max_nans) {
+                            // TODO: can we compute a confidence with nan_cnt and stddev?
+                            hyp.id++;
+                            hyp.dist = -1.* tx / (disparity_image.at<float>(row,col));
+                            hyps.push_back(hyp);
+                        }
+
+                    } // end check inside image
+                } //end if hyp width > min_hyp_w
+            } // end if valid
+        } // end for cols
+    } // end for rows
+
+
+    return rectToPythonNPArray(hyps);
+}
+
+
+void DisparitySlidingWindow::sayHello(){
+    std::cout << "Hello my friend!" << std::endl;
+}
+
 
 /**
     inspectHypothesisDepth      Verifies the disparity values inside a potential object proposal: We expect homogeneous disparity values if it is an object

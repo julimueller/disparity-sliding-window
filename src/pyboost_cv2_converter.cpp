@@ -146,7 +146,6 @@ PyObject* fromMatToNDArray(const Mat& m) {
 }
 
 Mat fromNDArrayToMat(PyObject* o) {
-    std::cout << "in fc" << std::endl;
 	cv::Mat m;
 	if (!PyArray_Check(o)) {
 		failmsg("argument is not a numpy array");
@@ -154,6 +153,7 @@ Mat fromNDArrayToMat(PyObject* o) {
 			m.allocator = &g_numpyAllocator;
 	} else {
 		PyArrayObject* oarr = (PyArrayObject*) o;
+
 
 		bool needcopy = false, needcast = false;
 		int typenum = PyArray_TYPE(oarr), new_typenum = typenum;
@@ -419,6 +419,7 @@ void matFromNDArrayBoostConverter::construct(PyObject* object,
 
 	m->allocator = &g_numpyAllocator;
 	data->convertible = storage;
+    std::cout << "end construct" <<std::endl;
 }
 
 } //end namespace pbcvt

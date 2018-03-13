@@ -12,10 +12,15 @@
 #include <vector>
 #include <opencv2/core/core.hpp>
 #include <boost/python.hpp>
+#include <numpy/arrayobject.h>
+#include "pyboost_cvconverter.hpp"
 
 class Rect {
 
    public:
+
+    Rect():x(0), y(0), w(0), h(0)
+    {}
 
     int x;
     int y;
@@ -37,6 +42,8 @@ public:
     bool initLookUpTable(const float &tx, const cv::Mat &camera_matrix, const cv::Mat &distortion_matrix, const float &min_disp, const float &max_disp, const float &disp_step);
     void generate(const cv::Mat &disparity_image, cv::Mat &dst, std::vector<Rect> &hyps, const float &tx);
     boost::python::list generate_py(const cv::Mat &disparity_image, const float &tx);
+    boost::python::object generate_py_via_mat(const cv::Mat &disparity_image, const float &tx);
+    void sayHello();
 
     void setHypCounter(const size_t &cnt);
     void setMaxNans(const size_t &cnt);
