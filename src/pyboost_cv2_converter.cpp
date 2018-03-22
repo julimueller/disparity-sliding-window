@@ -316,7 +316,7 @@ void* matFromNDArrayBoostConverter::convertible(PyObject* object) {
 /// @brief Construct a Mat from an NDArray object.
 void matFromNDArrayBoostConverter::construct(PyObject* object,
 		boost::python::converter::rvalue_from_python_stage1_data* data) {
-    std::cout << "construct" << std::endl;
+    //std::cout << "construct" << std::endl;
 
 	namespace python = boost::python;
 	// Object is a borrowed reference, so create a handle indicting it is
@@ -419,7 +419,7 @@ void matFromNDArrayBoostConverter::construct(PyObject* object,
 
 	m->allocator = &g_numpyAllocator;
 	data->convertible = storage;
-    std::cout << "end construct" <<std::endl;
+    //std::cout << "end construct" <<std::endl;
 }
 
 } //end namespace pbcvt

@@ -10,6 +10,7 @@
 #include <boost/python.hpp>
 #include "disparity_sliding_window.h"
 #include "pyboost_cvconverter.hpp"
+#include <boost/python/numeric.hpp>
 
 
 BOOST_PYTHON_MODULE(dsw_python)
@@ -24,8 +25,8 @@ BOOST_PYTHON_MODULE(dsw_python)
     boost::python::class_<DisparitySlidingWindow>("DisparitySlidingWindow", boost::python::init<float, float, float, int, int, int, size_t, float, float, int>())
             .def("initLookUpTable", &DisparitySlidingWindow::initLookUpTable)
             .def("generate_py", &DisparitySlidingWindow::generate_py)
-            .def("generate_py_via_mat", &DisparitySlidingWindow::generate_py_via_mat)
-            .def("sayHello", &DisparitySlidingWindow::sayHello);
+            .def("randomHypothesisGenerator", &DisparitySlidingWindow::randomHypothesisGenerator);
+
     boost::python::class_<Rect>("Rect", boost::python::init<>())
             .def_readwrite("x", &Rect::x)
             .def_readwrite("y", &Rect::y)
@@ -35,4 +36,6 @@ BOOST_PYTHON_MODULE(dsw_python)
             .def_readwrite("classId", &Rect::classId)
             .def_readwrite("confidence", &Rect::confidence)
             .def_readwrite("id", &Rect::id);
+
+
 }

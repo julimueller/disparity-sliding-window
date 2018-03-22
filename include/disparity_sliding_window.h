@@ -13,6 +13,8 @@
 #include <opencv2/core/core.hpp>
 #include <boost/python.hpp>
 #include <numpy/arrayobject.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include "pyboost_cvconverter.hpp"
 
 class Rect {
@@ -22,10 +24,13 @@ class Rect {
     Rect():x(0), y(0), w(0), h(0)
     {}
 
+    Rect(const Rect &rhs):x(rhs.x), y(rhs.y), w(rhs.w), h(rhs.h)
+    {}
+
     int x;
     int y;
-    int w;
-    int h;
+    double w;
+    double h;
     int dist;
     std::string classId;
     float confidence;
@@ -41,9 +46,8 @@ public:
 
     bool initLookUpTable(const float &tx, const cv::Mat &camera_matrix, const cv::Mat &distortion_matrix, const float &min_disp, const float &max_disp, const float &disp_step);
     void generate(const cv::Mat &disparity_image, cv::Mat &dst, std::vector<Rect> &hyps, const float &tx);
-    boost::python::list generate_py(const cv::Mat &disparity_image, const float &tx);
-    boost::python::object generate_py_via_mat(const cv::Mat &disparity_image, const float &tx);
-    void sayHello();
+    boost::python::object generate_py(const cv::Mat &disparity_image, const float &tx);
+    boost::python::object randomHypothesisGenerator(int size, bool transferOwnership);
 
     void setHypCounter(const size_t &cnt);
     void setMaxNans(const size_t &cnt);
@@ -86,5 +90,11 @@ private:
 
 
 };
+
+boost::python::object toPythonList(std::vector<Rect> vector);
+boost::python::object toPythonTuple(std::vector<Rect> vector);
+boost::python::object toPythonRectList(std::vector<Rect> vector);
+boost::python::object toPythonRectOwnership(std::vector<Rect *> &vector);
+boost::python::object rectToPythonNPArray(std::vector<Rect> vector);
 
 #endif // _DISPARITY_SLIDING_WINDOW_H_
