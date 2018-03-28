@@ -44,6 +44,7 @@ DisparitySlidingWindow::DisparitySlidingWindow(const float &obj_width, const flo
     hyp.id = 0;
     lut_adress_factor = 0;
     this->homogeneity_verification_method = class_type;
+    import_array();
 }
 
 /**
@@ -102,12 +103,14 @@ bool DisparitySlidingWindow::initLookUpTable(const float &tx, const cv::Mat &cam
 
         // calculate depth in meters
         tvec.at<float>(2,0) = -1.* tx / (disparity);
+        //std::cout << tvec.at<float>(2,0) << std::endl;
 
         // project
         cv::projectPoints(object_points, rvec, tvec, camera_matrix, distortion_matrix, image_points);
         // TODO: this assumes that the object is at the image center, it would be a better to use the matching ray!
         //       but this would mean w'd have a sizeof(float) * (cols/step_x) * (rows/step_y) * (disp_range/disp_step) LUT!
         hyp.w = (image_points.at(1).x - image_points.at(0).x);    // TODO: should we std::round here?
+
         //std::cout << "w: " << image_points.at(1).x << " " << image_points.at(0).x << " " << image_points.at(1).x - image_points.at(0).x << std::endl;
         //std::cout << "w: " << hyp.w<< std::endl;
 
@@ -321,6 +324,45 @@ boost::python::object rectToPythonNPArray(std::vector<Rect> vector){
 }
 
 
+/**
+    matToPythonNPArray:    Takes a cv::Mat object and converts it to Python ND array and is exported to PYTHON
+    @param const cv::Mat &mat: Matrix to be converted to NP array
+*/
+boost::python::object matToPythonNPArray(const cv::Mat &mat){
+    cv::Size s = mat.size();
+    npy_intp dims[2] = {s.height, s.width};
+    cv::Mat copy_mat;
+    mat.convertTo(copy_mat, CV_32F);
+    float * data = reinterpret_cast<float*>(copy_mat.ptr<float>(0));
+
+    PyObject * pyObj = PyArray_SimpleNewFromData( 2, dims, NPY_FLOAT32, data);
+    boost::python::handle<> handle( pyObj );
+    boost::python::numeric::array arr( handle );
+    return arr.copy();
+}
+
+
+
+/**
+    rectToMat:      Takes a vector of Rectangles and converts the vector into cv::Mat in a way that
+                    each row represents 1 rectangle ( 1 row = (x,y,w,h) of 1 rectangle)
+                    @param std::vector<Rect>: Vector of rectangles
+
+*/
+boost::python::object rectToMat(const std::vector<Rect> &vector){
+    cv::Mat mat = cv::Mat(vector.size(), 4, CV_32S, cv::Scalar(0));
+    for(int i = 0; i < vector.size(); i++){
+        mat.at<int>(i, 0) = vector[i].x;
+        mat.at<int>(i, 1) = vector[i].y;
+        mat.at<int>(i, 2) = vector[i].w;
+        mat.at<int>(i, 3) = vector[i].h;
+    }
+    //std::cout <<mat << "\n";
+
+    return matToPythonNPArray(mat);
+}
+
+
 
 /**
     MethodsToConv: After achieving hypotheses,  there are several methods to pass it to Python
@@ -409,7 +451,7 @@ boost::python::object DisparitySlidingWindow::randomHypothesisGenerator(int size
             hyps_test[i].w = w;
             hyps_test[i].h = h;
         }
-        return rectToPythonNPArray(hyps_test);
+        return rectToMat(hyps_test);
     }
 }
 
@@ -465,7 +507,6 @@ boost::python::object DisparitySlidingWindow::generate_py(const cv::Mat &dispari
                 // Check if proposal larger than minimum width
                // std::cout << "hyp w: " << hyp.w << ", min w : " << min_hyp_width << std::endl;
                 if( hyp.w > min_hyp_width) {
-                    std::cout << "test 2" << std::endl;
 
                     // Step size in percentage
                     step_x_adapt = std::floor(float(hyp.w * step_perc));
@@ -494,6 +535,8 @@ boost::python::object DisparitySlidingWindow::generate_py(const cv::Mat &dispari
                     // adjust x and y
                     hyp.x = col - hyp.w/2;
                     hyp.y = row - hyp.h/2;
+
+                    //std::cout << "hyp x: " << hyp.x << ", hyp y: "<< hyp.y << std::endl;
 
                     // Check if hyp is insinde image and hyp_width is in range(min,max)
                     if (hyp.x > 0 && hyp.y > 0  && ((hyp.x + hyp.w) < disparity_image.cols) && ((hyp.y + hyp.h) < disparity_image.rows) && (hyp.w > min_hyp_width) && (hyp.w < max_hyp_width)) {

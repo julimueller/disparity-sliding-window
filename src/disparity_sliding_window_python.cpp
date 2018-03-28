@@ -18,7 +18,7 @@ BOOST_PYTHON_MODULE(dsw_python)
     //initialize converters
     Py_Initialize();
     boost::python::numeric::array::set_module_and_type("numpy", "ndarray");
-    import_array();
+    //import_array();
     boost::python::to_python_converter<cv::Mat, pbcvt::matToNDArrayBoostConverter>();
     pbcvt::matFromNDArrayBoostConverter();
 
