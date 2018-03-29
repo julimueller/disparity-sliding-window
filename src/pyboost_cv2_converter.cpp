@@ -135,6 +135,9 @@ PyObject* fromMatToNDArray(const Mat& m) {
     //if( !m.data )
        // Py_RETURN_NONE;
     Mat temp, *p = (Mat*)&m;
+
+    temp = cv::Mat(m.rows, m.cols, CV_8UC1, cv::Scalar(0));
+
     if(!p->refcount || p->allocator != &g_numpyAllocator)
     {
         temp.allocator = &g_numpyAllocator;

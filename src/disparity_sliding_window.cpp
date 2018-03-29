@@ -83,6 +83,8 @@ bool DisparitySlidingWindow::initLookUpTable(const float &tx, const cv::Mat &cam
 
     std::cout << "INFO:\tLUT adress factor: " << lut_adress_factor << std::endl;
     std::cout << "INFO:\tCalculating a hypotheses LUT with " << ((max_disp-min_disp)/disp_step)+1 << " entries." << std::endl;
+    //std::cout <<"camera matrix: " << camera_matrix <<"\n";
+    //std::cout <<"distortion_matrix: " << distortion_matrix <<"\n";
 
     // prepare real world object points
     std::vector<cv::Point3f> object_points;
@@ -94,6 +96,7 @@ bool DisparitySlidingWindow::initLookUpTable(const float &tx, const cv::Mat &cam
 
     // prepare other data for cv::projectPoints
     std::vector<cv::Point2f> image_points;
+
     cv::Mat_<float> tvec = (cv::Mat_<float>(3,1) << 0., 0., 0.);
     cv::Mat_<float> rvec = (cv::Mat_<float>(3,1) << 0., 0., 0.);
 
@@ -123,6 +126,10 @@ bool DisparitySlidingWindow::initLookUpTable(const float &tx, const cv::Mat &cam
         LUT.push_back(hyp);
 
     }
+
+    /*for(int i = 0; i <LUT.size(); i++){
+        std::cout << LUT[i].x << " "<< LUT[i].y << " "<< LUT[i].w << " "<< LUT[i].h << "\n";
+    }*/
 
     return true;
 }
@@ -233,228 +240,6 @@ void DisparitySlidingWindow::generate(const cv::Mat &disparity_image, cv::Mat &d
 
 }
 
-/**
-    toPythonList:               Converts vector of rectangles to python list
-
-    @param std::vector<T>       Vector of Rectangles, ....
-    @return                     Python list
-
-*/
-boost::python::object toPythonList(std::vector<Rect> vector) {
-    typename std::vector<Rect>::iterator iter;
-    boost::python::list list;
-    for (iter = vector.begin(); iter != vector.end(); ++iter) {
-        list.append(iter->x);
-        list.append(iter->y);
-        list.append(iter->w);
-        list.append(iter->h);
-    }
-
-    return boost::python::object(list);
-}
-
-
-/**
-    toPythonTuple: Converts the vector of rectangles to a list of tuples in python which each tuple keeps (x,y,w,h)
-
-    @param std::vector<Rect>: Vector of rectangles
-    @return: Python tuple list
-
-*/
-boost::python::object toPythonTuple(std::vector<Rect> vector) {
-    typename std::vector<Rect>::iterator iter;
-    boost::python::list tuple_list;
-    for (iter = vector.begin(); iter != vector.end(); ++iter) {
-        boost::python::tuple t = boost::python::make_tuple(iter->x, iter->y, iter->w, iter->h);
-        tuple_list.append(t);
-    }
-    return boost::python::object(tuple_list);
-}
-
-/**
-    toPythonRectList:   Takes a std library vector of rectangles as input and returns Python list of Rect class(Rect class is already exported to Python,
-                            for more information see disparity_sliding_window_python.cpp )
-    @param std::vector<Rect>:   Vector of rectangles
-*/
-
-boost::python::object toPythonRectList(std::vector<Rect> vector) {
-    typename std::vector<Rect>::iterator iter;
-    boost::python::list list;
-    for (iter = vector.begin(); iter != vector.end(); ++iter) {
-        list.append(boost::python::object(*iter));
-    }
-    return boost::python::object(list);
-}
-
-
-
-/**
-    toPythonRectOwnership: Takes a std vector of rectangles pointers as input and returns Python list of rectangles but classes are transferred from C++
-                            and ownership is passed from C++ to Python so when lifetime of rectangles are finished on Python side, objects will be deleted
-    @param std::vector<Rect*>: Vector of rectangles pointers
-*/
-
-boost::python::object toPythonRectOwnership(std::vector<Rect*> &vector) {
-    namespace python = boost::python;
-    typename python::manage_new_object::apply<Rect*>::type converter;
-    boost::python::list list;
-    for (int i = 0; i < vector.size(); ++i) {
-        std::unique_ptr<Rect> ptr(vector[i]);
-        python::handle<> handle(converter(*ptr));
-        list.append(boost::python::object(handle));
-        ptr.release();
-    }
-    return boost::python::object(list);
-}
-
-/**
-    rectToPythonNPArray:    Takes a vector of rectangles as input, creates a C++ Mat object in such a way that each row in the matrix
-                                will keep (x,y,w,h) information of 1 rectangle. The row number will be equal to size of vector and column number will be equal to 4.
-                                Later on, this Mat object is converted to Python ND array and is exported to PYTHON
-    @param std::vector<Rect>: Vector of rectangles
-*/
-boost::python::object rectToPythonNPArray(std::vector<Rect> vector){
-    boost::python::list l;
-    for(int i = 0; i < vector.size(); i++){
-        boost::python::tuple t = boost::python::make_tuple(vector[i].x, vector[i].y, vector[i].w, vector[i].h);
-        l.append(t);
-    }
-    boost::python::numeric::array arr = boost::python::numeric::array(l);
-    return boost::python::object(arr);
-}
-
-
-/**
-    matToPythonNPArray:    Takes a cv::Mat object and converts it to Python ND array and is exported to PYTHON
-    @param const cv::Mat &mat: Matrix to be converted to NP array
-*/
-boost::python::object matToPythonNPArray(const cv::Mat &mat){
-    cv::Size s = mat.size();
-    npy_intp dims[2] = {s.height, s.width};
-    cv::Mat copy_mat;
-    mat.convertTo(copy_mat, CV_32F);
-    float * data = reinterpret_cast<float*>(copy_mat.ptr<float>(0));
-
-    PyObject * pyObj = PyArray_SimpleNewFromData( 2, dims, NPY_FLOAT32, data);
-    boost::python::handle<> handle( pyObj );
-    boost::python::numeric::array arr( handle );
-    return arr.copy();
-}
-
-
-
-/**
-    rectToMat:      Takes a vector of Rectangles and converts the vector into cv::Mat in a way that
-                    each row represents 1 rectangle ( 1 row = (x,y,w,h) of 1 rectangle)
-                    @param std::vector<Rect>: Vector of rectangles
-
-*/
-boost::python::object rectToMat(const std::vector<Rect> &vector){
-    cv::Mat mat = cv::Mat(vector.size(), 4, CV_32S, cv::Scalar(0));
-    for(int i = 0; i < vector.size(); i++){
-        mat.at<int>(i, 0) = vector[i].x;
-        mat.at<int>(i, 1) = vector[i].y;
-        mat.at<int>(i, 2) = vector[i].w;
-        mat.at<int>(i, 3) = vector[i].h;
-    }
-    //std::cout <<mat << "\n";
-
-    return matToPythonNPArray(mat);
-}
-
-
-
-/**
-    MethodsToConv: After achieving hypotheses,  there are several methods to pass it to Python
-        @OneDList: It will concatenate (x,y,w,h) of rectangles one by one on an integer array and return it as Python list
-        @TupleList: It will return list of Python tuples as each list entry will be tuples of (x,y,w,h) representing 1 rectangle
-        @RectList: It will return list of Rectangles by creating copy of each C++ rectangle to Python since Rect class is exported
-        @NumpyArr: It will return a Numpy array where each row represents for a rectangle and in each row (x,y,w,h) information of rectangle is kept
-
-    fromRectVectToPythonList:   It will either copy the instance of C++ vector or pass it the ownership of vector to Python depending on chosen method
-        @param std::vector<Rect>: Vector of rectangles
-        @param MethodsToConv: The method which is to be chosen for the conversion
-*/
-enum MethodsToConv{ OneDList, TupleList, RectList, NumpyArr };
-boost::python::object fromRectVectToPythonList(std::vector<Rect> vector, MethodsToConv method){
-    boost::python::object obj;
-
-    switch(method){
-    case OneDList:{
-
-        obj = toPythonList(vector);
-        break;
-        }
-    case TupleList:{
-        obj = toPythonTuple(vector);
-        break;
-    }
-    case RectList:{
-        obj = toPythonRectList(vector);
-        break;
-    }
-    case NumpyArr:{
-        obj = rectToPythonNPArray(vector);
-        break;
-    }
-    default:
-        break;
-    }
-
-    return obj;
-}
-
-
-/**
-    randomHypothesisGenerator:      Creates random rectangles which all the variables of rectangle object are in the range [0,100] and it returns the rectangles inside a python object
-                                    depending on the chosen method, the options are:
-                                        i. It can return as the list of integers, which the (x,y) coordinates and width, height of rectangles are consecutively added to an integer vector
-                                        ii. It can return as the list of python tuples and each entry in the list is tuple of (x,y,w,h)
-                                        iii. It can return as the list of rectangles, Rect class is also included in Python side, so the conversion from C++ to Python will be automated  while appending each entry to list
-                                        iv. It can return as Numpy array where each row represents a rectangle and in each row (x,y,w,h) is kept.
-
-                                    @param size: It is the number of rectangles to be generated
-                                    @param transferOwnership: this one is put for debugging reasons, when the object ownership is translated, the objects should be represented
-                                    by pointers, in other cases, the objects can be restored, created without knowing their pointers, their addresses in the memory, therefore for debugging
-                                    of transfer of ownership, this option is put.
-
-*/
-boost::python::object DisparitySlidingWindow::randomHypothesisGenerator(int size, bool transferOwnership){
-    if(transferOwnership){
-        std::vector<Rect*> hyps_test;
-        hyps_test.resize(size);
-
-        for(int i = 0; i<hyps_test.size(); i++){
-            int x = rand()%100;
-            int y = rand()%100;
-            int w = rand()%100;
-            int h = rand()%100;
-            hyps_test[i] = new Rect;
-            hyps_test[i]->x = x;
-            hyps_test[i]->y = y;
-            hyps_test[i]->w = w;
-            hyps_test[i]->h = h;
-        }
-        return toPythonRectOwnership(hyps_test);
-    }
-    else{
-        std::vector<Rect> hyps_test;
-        hyps_test.resize(size);
-
-        for(int i = 0; i<hyps_test.size(); i++){
-            int x = rand()%100;
-            int y = rand()%100;
-            int w = rand()%100;
-            int h = rand()%100;
-            hyps_test[i].x = x;
-            hyps_test[i].y = y;
-            hyps_test[i].w = w;
-            hyps_test[i].h = h;
-        }
-        return rectToMat(hyps_test);
-    }
-}
-
 
 /**
     generate_py:                Calculates object proposals from the disparity input and return python list inside a python object
@@ -466,7 +251,7 @@ boost::python::object DisparitySlidingWindow::randomHypothesisGenerator(int size
 */
 boost::python::object DisparitySlidingWindow::generate_py(const cv::Mat &disparity_image, const float &tx) {
 
-    std::cout <<"disparity image size: "<< disparity_image.rows <<" " <<disparity_image.cols << std::endl;
+    //std::cout <<"disparity image: "<< disparity_image << std::endl;
     // check if we're ready to generate
     if (LUT.size() == 0 || lut_adress_factor == 0) {
         std::cout << "ERROR:\tYou must call 'calculateLookUpTable' before calling 'generate'!" << std::endl;
@@ -536,7 +321,7 @@ boost::python::object DisparitySlidingWindow::generate_py(const cv::Mat &dispari
                     hyp.x = col - hyp.w/2;
                     hyp.y = row - hyp.h/2;
 
-                    //std::cout << "hyp x: " << hyp.x << ", hyp y: "<< hyp.y << std::endl;
+                    //std::cout << "hyp x: " << hyp.x << ", hyp y: "<< hyp.y << ", hyp w: " << hyp.w << ", hyp h: "<< hyp.h << std::endl;
 
                     // Check if hyp is insinde image and hyp_width is in range(min,max)
                     if (hyp.x > 0 && hyp.y > 0  && ((hyp.x + hyp.w) < disparity_image.cols) && ((hyp.y + hyp.h) < disparity_image.rows) && (hyp.w > min_hyp_width) && (hyp.w < max_hyp_width)) {
@@ -544,6 +329,8 @@ boost::python::object DisparitySlidingWindow::generate_py(const cv::Mat &dispari
                         // Check disparity in Hyp (6 Points)
                         inspectHypothesisDepth(disparity_image(cv::Rect(hyp.x,hyp.y,hyp.w,hyp.h)), stddev, nan_cnt);
                         //stddev=0.;
+                        //std::cout <<"stddev: " << stddev <<", max stddev: " << max_stddev <<"\n";
+                        //std::cout <<"nan_cnt: " << nan_cnt <<", max nan_cnt: " << max_nans <<"\n";
                         if (stddev < max_stddev && nan_cnt <= max_nans) {
 
                             // TODO: can we compute a confidence with nan_cnt and stddev?
@@ -558,8 +345,60 @@ boost::python::object DisparitySlidingWindow::generate_py(const cv::Mat &dispari
         } // end for cols
     } // end for rows
 
-    return fromRectVectToPythonList(hyps, TupleList);
+    return toPythonTuple(hyps);
 
+}
+
+
+
+/**
+    randomHypothesisGenerator:      Creates random rectangles which all the variables of rectangle object are in the range [0,100] and it returns the rectangles inside a python object
+                                    depending on the chosen method, the options are:
+                                        i. It can return as the list of integers, which the (x,y) coordinates and width, height of rectangles are consecutively added to an integer vector
+                                        ii. It can return as the list of python tuples and each entry in the list is tuple of (x,y,w,h)
+                                        iii. It can return as the list of rectangles, Rect class is also included in Python side, so the conversion from C++ to Python will be automated  while appending each entry to list
+                                        iv. It can return as Numpy array where each row represents a rectangle and in each row (x,y,w,h) is kept.
+
+                                    @param size: It is the number of rectangles to be generated
+                                    @param transferOwnership: this one is put for debugging reasons, when the object ownership is translated, the objects should be represented
+                                    by pointers, in other cases, the objects can be restored, created without knowing their pointers, their addresses in the memory, therefore for debugging
+                                    of transfer of ownership, this option is put.
+
+*/
+boost::python::object DisparitySlidingWindow::randomHypothesisGenerator(int size, bool transferOwnership){
+    if(transferOwnership){
+        std::vector<Rect*> hyps_test;
+        hyps_test.resize(size);
+
+        for(int i = 0; i<hyps_test.size(); i++){
+            int x = rand()%100;
+            int y = rand()%100;
+            int w = rand()%100;
+            int h = rand()%100;
+            hyps_test[i] = new Rect;
+            hyps_test[i]->x = x;
+            hyps_test[i]->y = y;
+            hyps_test[i]->w = w;
+            hyps_test[i]->h = h;
+        }
+        return toPythonRectOwnership(hyps_test);
+    }
+    else{
+        std::vector<Rect> hyps_test;
+        hyps_test.resize(size);
+
+        for(int i = 0; i<hyps_test.size(); i++){
+            int x = rand()%100;
+            int y = rand()%100;
+            int w = rand()%100;
+            int h = rand()%100;
+            hyps_test[i].x = x;
+            hyps_test[i].y = y;
+            hyps_test[i].w = w;
+            hyps_test[i].h = h;
+        }
+        return rectToMat(hyps_test);
+    }
 }
 
 
@@ -734,4 +573,190 @@ void DisparitySlidingWindow::setObjHeight(const float &val) {
 
 void DisparitySlidingWindow::setStepPercentage(const float &val) {
     step_perc= val;
+}
+
+
+
+/************************************************************/
+/*  All the functions related to conversions between       */
+/*  C++ / Python are located in below:   */
+/************************************************************/
+
+
+
+/**
+    toPythonList:               Converts vector of rectangles to python list
+
+    @param std::vector<T>       Vector of Rectangles, ....
+    @return                     Python list
+
+*/
+boost::python::object toPythonList(std::vector<Rect> vector) {
+    typename std::vector<Rect>::iterator iter;
+    boost::python::list list;
+    for (iter = vector.begin(); iter != vector.end(); ++iter) {
+        list.append(iter->x);
+        list.append(iter->y);
+        list.append(iter->w);
+        list.append(iter->h);
+    }
+
+    return boost::python::object(list);
+}
+
+
+/**
+    toPythonTuple: Converts the vector of rectangles to a list of tuples in python which each tuple keeps (x,y,w,h)
+
+    @param std::vector<Rect>: Vector of rectangles
+    @return: Python tuple list
+
+*/
+boost::python::object toPythonTuple(std::vector<Rect> vector) {
+    typename std::vector<Rect>::iterator iter;
+    boost::python::list tuple_list;
+    for (iter = vector.begin(); iter != vector.end(); ++iter) {
+        boost::python::tuple t = boost::python::make_tuple(iter->x, iter->y, iter->w, iter->h);
+        tuple_list.append(t);
+    }
+    return boost::python::object(tuple_list);
+}
+
+/**
+    toPythonRectList:   Takes a std library vector of rectangles as input and returns Python list of Rect class(Rect class is already exported to Python,
+                            for more information see disparity_sliding_window_python.cpp )
+    @param std::vector<Rect>:   Vector of rectangles
+*/
+
+boost::python::object toPythonRectList(std::vector<Rect> vector) {
+    typename std::vector<Rect>::iterator iter;
+    boost::python::list list;
+    for (iter = vector.begin(); iter != vector.end(); ++iter) {
+        list.append(boost::python::object(*iter));
+    }
+    return boost::python::object(list);
+}
+
+
+
+/**
+    toPythonRectOwnership: Takes a std vector of rectangles pointers as input and returns Python list of rectangles but classes are transferred from C++
+                            and ownership is passed from C++ to Python so when lifetime of rectangles are finished on Python side, objects will be deleted
+    @param std::vector<Rect*>: Vector of rectangles pointers
+*/
+
+boost::python::object toPythonRectOwnership(std::vector<Rect*> &vector) {
+    namespace python = boost::python;
+    typename python::manage_new_object::apply<Rect*>::type converter;
+    boost::python::list list;
+    for (int i = 0; i < vector.size(); ++i) {
+        std::unique_ptr<Rect> ptr(vector[i]);
+        python::handle<> handle(converter(*ptr));
+        list.append(boost::python::object(handle));
+        ptr.release();
+    }
+    return boost::python::object(list);
+}
+
+/**
+    rectToPythonNPArray:    Takes a vector of rectangles as input, creates a C++ Mat object in such a way that each row in the matrix
+                                will keep (x,y,w,h) information of 1 rectangle. The row number will be equal to size of vector and column number will be equal to 4.
+                                Later on, this Mat object is converted to Python ND array and is exported to PYTHON
+    @param std::vector<Rect>: Vector of rectangles
+*/
+boost::python::object rectToPythonNPArray(std::vector<Rect> vector){
+    boost::python::list l;
+    for(int i = 0; i < vector.size(); i++){
+        boost::python::tuple t = boost::python::make_tuple(vector[i].x, vector[i].y, vector[i].w, vector[i].h);
+        l.append(t);
+    }
+    boost::python::numeric::array arr = boost::python::numeric::array(l);
+    return boost::python::object(arr);
+}
+
+
+/**
+    matToPythonNPArray:    Takes a cv::Mat object and converts it to Python ND array and is exported to PYTHON
+    @param const cv::Mat &mat: Matrix to be converted to NP array
+*/
+boost::python::object matToPythonNPArray(const cv::Mat &mat){
+    cv::Size s = mat.size();
+    npy_intp dims[2] = {s.height, s.width};
+    cv::Mat copy_mat;
+    mat.convertTo(copy_mat, CV_32F);
+    float * data = reinterpret_cast<float*>(copy_mat.ptr<float>(0));
+
+    PyObject * pyObj = PyArray_SimpleNewFromData( 2, dims, NPY_FLOAT32, data);
+    boost::python::handle<> handle( pyObj );
+    boost::python::numeric::array arr( handle );
+    return arr.copy();
+}
+
+
+
+/**
+    rectToMat:      Takes a vector of Rectangles and converts the vector into cv::Mat in a way that
+                    each row represents 1 rectangle ( 1 row = (x,y,w,h) of 1 rectangle)
+                    @param std::vector<Rect>: Vector of rectangles
+
+*/
+boost::python::object rectToMat(const std::vector<Rect> &vector){
+    cv::Mat mat = cv::Mat(vector.size(), 4, CV_32S, cv::Scalar(0));
+    for(int i = 0; i < vector.size(); i++){
+        mat.at<int>(i, 0) = vector[i].x;
+        mat.at<int>(i, 1) = vector[i].y;
+        mat.at<int>(i, 2) = vector[i].w;
+        mat.at<int>(i, 3) = vector[i].h;
+    }
+
+    return matToPythonNPArray(mat);
+}
+
+
+/**
+
+    extractRects: Take a python list and creates rectangles from entries in the list.
+                  The entries in the list should be either type of boost::python::tuple or Rect.
+                  The other type of entries will be skipped.
+                  @param boost::python::list &ns: Python list object
+
+*/
+
+std::vector<Rect> extractRects(boost::python::list& ns){
+    std::vector<Rect> vector;
+    for (int i = 0; i < len(ns); ++i)
+    {
+        boost::python::extract<boost::python::object> objectExtractor(ns[i]);
+        boost::python::object o=objectExtractor();
+        std::string object_classname = boost::python::extract<std::string>(o.attr("__class__").attr("__name__"));
+
+        Rect r;
+        if(object_classname=="Rect")
+            r = Rect(boost::python::extract<Rect>(ns[i]));
+        else if(object_classname=="tuple"){
+            boost::python::tuple t = boost::python::extract<boost::python::tuple>(o);
+            r.x = boost::python::extract<int>(t[0]);
+            r.y = boost::python::extract<int>(t[1]);
+            r.w = boost::python::extract<int>(t[2]);
+            r.h = boost::python::extract<int>(t[3]);
+        }
+        else
+            std::cout<<"this is not either a tuple or a Rect. This is an object: "<<object_classname<<std::endl;
+        vector.push_back(r);
+    }
+    return vector;
+}
+
+
+
+/**
+
+        py_rectToMat: Takes a python list of objects, extracts the rectangles and returns
+                      Python Numpy array which each row of array is (x,y,w,h) of a rectangle.
+                      @param boost::python::list &ns: Python list object
+*/
+boost::python::object py_rectToMat(boost::python::list& ns)
+{
+    std::vector<Rect> vector = extractRects(ns);
+    return rectToMat(vector);
 }

@@ -28,14 +28,24 @@ BOOST_PYTHON_MODULE(dsw_python)
             .def("randomHypothesisGenerator", &DisparitySlidingWindow::randomHypothesisGenerator);
 
     boost::python::class_<Rect>("Rect", boost::python::init<>())
-            .def_readwrite("x", &Rect::x)
-            .def_readwrite("y", &Rect::y)
-            .def_readwrite("w", &Rect::w)
-            .def_readwrite("h", &Rect::h)
-            .def_readwrite("dist", &Rect::dist)
-            .def_readwrite("classId", &Rect::classId)
-            .def_readwrite("confidence", &Rect::confidence)
-            .def_readwrite("id", &Rect::id);
+            .add_property("x", boost::python::make_getter(&Rect::x, boost::python::return_value_policy<boost::python::return_by_value>()),
+                                 boost::python::make_setter(&Rect::x, boost::python::return_value_policy<boost::python::return_by_value>()))
+            .add_property("y", boost::python::make_getter(&Rect::y, boost::python::return_value_policy<boost::python::return_by_value>()),
+                                 boost::python::make_setter(&Rect::y, boost::python::return_value_policy<boost::python::return_by_value>()))
+            .add_property("w", boost::python::make_getter(&Rect::w, boost::python::return_value_policy<boost::python::return_by_value>()),
+                                 boost::python::make_setter(&Rect::w, boost::python::return_value_policy<boost::python::return_by_value>()))
+            .add_property("h", boost::python::make_getter(&Rect::h, boost::python::return_value_policy<boost::python::return_by_value>()),
+                                 boost::python::make_setter(&Rect::h, boost::python::return_value_policy<boost::python::return_by_value>()))
+            .add_property("dist", boost::python::make_getter(&Rect::dist, boost::python::return_value_policy<boost::python::return_by_value>()),
+                                 boost::python::make_setter(&Rect::dist, boost::python::return_value_policy<boost::python::return_by_value>()))
+            .add_property("classId", boost::python::make_getter(&Rect::classId, boost::python::return_value_policy<boost::python::return_by_value>()),
+                                 boost::python::make_setter(&Rect::classId, boost::python::return_value_policy<boost::python::return_by_value>()))
+            .add_property("confidence", boost::python::make_getter(&Rect::confidence, boost::python::return_value_policy<boost::python::return_by_value>()),
+                                 boost::python::make_setter(&Rect::confidence, boost::python::return_value_policy<boost::python::return_by_value>()))
+            .add_property("id", boost::python::make_getter(&Rect::id, boost::python::return_value_policy<boost::python::return_by_value>()),
+                                 boost::python::make_setter(&Rect::id, boost::python::return_value_policy<boost::python::return_by_value>()));
+
+    boost::python::def("py_rectToMat", &py_rectToMat);
 
 
 }
