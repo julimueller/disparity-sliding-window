@@ -44,7 +44,6 @@ DisparitySlidingWindow::DisparitySlidingWindow(const float &obj_width, const flo
     hyp.id = 0;
     lut_adress_factor = 0;
     this->homogeneity_verification_method = class_type;
-    import_array();
 }
 
 /**
@@ -126,6 +125,7 @@ bool DisparitySlidingWindow::initLookUpTable(const float &tx, const cv::Mat &cam
         LUT.push_back(hyp);
 
     }
+
 
     /*for(int i = 0; i <LUT.size(); i++){
         std::cout << LUT[i].x << " "<< LUT[i].y << " "<< LUT[i].w << " "<< LUT[i].h << "\n";
@@ -332,7 +332,6 @@ boost::python::object DisparitySlidingWindow::generate_py(const cv::Mat &dispari
                         //std::cout <<"stddev: " << stddev <<", max stddev: " << max_stddev <<"\n";
                         //std::cout <<"nan_cnt: " << nan_cnt <<", max nan_cnt: " << max_nans <<"\n";
                         if (stddev < max_stddev && nan_cnt <= max_nans) {
-
                             // TODO: can we compute a confidence with nan_cnt and stddev?
                             hyp.id++;
                             hyp.dist = -1.* tx / (disparity_image.at<float>(row,col));
@@ -519,6 +518,7 @@ void DisparitySlidingWindow::inspectHypothesisDepth(const cv::Mat &hyp, float &s
                 }
             }
             stddev = std::sqrt(sum/(float)cnt);
+
                 break;
             }
 
