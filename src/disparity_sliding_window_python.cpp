@@ -24,8 +24,7 @@ BOOST_PYTHON_MODULE(dsw_python)
 
     boost::python::class_<DisparitySlidingWindow>("DisparitySlidingWindow", boost::python::init<float, float, float, int, int, int, size_t, float, float, int>())
             .def("initLookUpTable", &DisparitySlidingWindow::initLookUpTable)
-            .def("generate_py", &DisparitySlidingWindow::generate_py)
-            .def("randomHypothesisGenerator", &DisparitySlidingWindow::randomHypothesisGenerator);
+            .def("generate_py", &DisparitySlidingWindow::generate_py);
 
     boost::python::class_<Rect>("Rect", boost::python::init<>())
             .add_property("x", boost::python::make_getter(&Rect::x, boost::python::return_value_policy<boost::python::return_by_value>()),
