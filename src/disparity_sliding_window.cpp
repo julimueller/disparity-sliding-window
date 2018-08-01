@@ -252,20 +252,18 @@ boost::python::list toPythonList(std::vector<T> vector) {
     @return                     Python list as list = [x1,y1,w1,h1,x2,y2,w2,h2,...]
 
 */
-boost::python::list DisparitySlidingWindow::generate_py(const cv::Mat &disparity_image, const float &tx) {
+boost::python::object DisparitySlidingWindow::generate_py(const cv::Mat &disparity_image, const float &tx) {
 
     // check if we're ready to generate
     if (LUT.size() == 0 || lut_adress_factor == 0) {
         std::cout << "ERROR:\tYou must call 'calculateLookUpTable' before calling 'generate'!" << std::endl;
-        boost::python::list l;
-        return l;
+        return boost::python::list();
     }
 
     // check if disparity image is of type float
     if (disparity_image.type() != CV_32FC1) {
         std::cout << "ERROR:\tWe expect a float image as an input!" << std::endl;
-        boost::python::list l;
-        return l;
+        return boost::python::list();
     }
 
     std::vector<Rect> hyps;
@@ -286,11 +284,13 @@ boost::python::list DisparitySlidingWindow::generate_py(const cv::Mat &disparity
 
         // for cols
         for (int col = 0; col < disparity_image.cols; col = col + step_x_adapt) {
+            std::cout << "loop" << std::endl;
             // check if value is valid
             if ((!(std::isnan(disparity_image.at<float>(row,col)))) && (!(std::isnan(disparity_copy.at<float>(row,col))))) {
 
                 // Get Hyp width from Table (shift sub-decimals away: *lut_adress_factor)
                 hyp = LUT[((int)disparity_image.at<float>(row,col)) * lut_adress_factor];
+                std::cout << hyp.w << std::endl;
                 // Check if proposal larger than minimum width
                 if( hyp.w > min_hyp_width) {
 
@@ -341,20 +341,7 @@ boost::python::list DisparitySlidingWindow::generate_py(const cv::Mat &disparity
         } // end for cols
     } // end for rows
 
-    std::vector<int> hyps_out;
-
-    // convert it to vector int [x,y,w,h,...]
-    for (size_t i=0; i < hyps.size(); ++i) {
-        hyps_out.push_back(hyps[i].x);
-        hyps_out.push_back(hyps[i].y);
-        hyps_out.push_back(hyps[i].w);
-        hyps_out.push_back(hyps[i].h);
-    }
-
-    // std vector int to python list
-    boost::python::list list = toPythonList(hyps_out);
-
-    return list;
+    return toPythonTuple(hyps);
 }
 
 /**

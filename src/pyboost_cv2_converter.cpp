@@ -135,6 +135,9 @@ PyObject* fromMatToNDArray(const Mat& m) {
     //if( !m.data )
        // Py_RETURN_NONE;
     Mat temp, *p = (Mat*)&m;
+
+    temp = cv::Mat(m.rows, m.cols, CV_8UC1, cv::Scalar(0));
+
     if(!p->refcount || p->allocator != &g_numpyAllocator)
     {
         temp.allocator = &g_numpyAllocator;
@@ -146,7 +149,6 @@ PyObject* fromMatToNDArray(const Mat& m) {
 }
 
 Mat fromNDArrayToMat(PyObject* o) {
-    std::cout << "in fc" << std::endl;
 	cv::Mat m;
 	if (!PyArray_Check(o)) {
 		failmsg("argument is not a numpy array");
@@ -154,6 +156,7 @@ Mat fromNDArrayToMat(PyObject* o) {
 			m.allocator = &g_numpyAllocator;
 	} else {
 		PyArrayObject* oarr = (PyArrayObject*) o;
+
 
 		bool needcopy = false, needcast = false;
 		int typenum = PyArray_TYPE(oarr), new_typenum = typenum;
@@ -316,7 +319,7 @@ void* matFromNDArrayBoostConverter::convertible(PyObject* object) {
 /// @brief Construct a Mat from an NDArray object.
 void matFromNDArrayBoostConverter::construct(PyObject* object,
 		boost::python::converter::rvalue_from_python_stage1_data* data) {
-    std::cout << "construct" << std::endl;
+    //std::cout << "construct" << std::endl;
 
 	namespace python = boost::python;
 	// Object is a borrowed reference, so create a handle indicting it is
@@ -419,6 +422,7 @@ void matFromNDArrayBoostConverter::construct(PyObject* object,
 
 	m->allocator = &g_numpyAllocator;
 	data->convertible = storage;
+    //std::cout << "end construct" <<std::endl;
 }
 
 } //end namespace pbcvt
