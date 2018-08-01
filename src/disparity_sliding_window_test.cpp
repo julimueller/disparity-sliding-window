@@ -24,7 +24,6 @@ int getdir (std::string dir, std::vector<std::string> &files)
         std::cout << "Error(" << errno << ") opening " << dir << std::endl;
         return errno;
     }
-
     while ((dirp = readdir(dp)) != NULL) {
         if (std::string(dirp->d_name).find(".png") != std::string::npos) {
             files.push_back(std::string(dirp->d_name));
@@ -179,7 +178,6 @@ int main(int argc, char** argv) {
 
     // sort files by number
     std::sort(files_left.begin(), files_left.end());
-
     // Parameters for SGM
     int min_disparity = 2 ;
     int max_disparity = 114;
@@ -201,16 +199,15 @@ int main(int argc, char** argv) {
     int min_width_image = 10;
     int max_width_image = 200;
     int class_id = 10;
-    size_t nan_count = 6;
-    float stddev = 0.05;
-    float step_perc = 0.4;
+    size_t nan_count = 4;
+    float stddev = 1.0;
+    float step_perc = 0.3;
     int class_type = DisparitySlidingWindow::HOMOGENEITY_VERIFICATION::PEDESTRIAN;
 
 
     // Constructors for SGM and Disparity Sliding Window
     cv::StereoSGBM SGM(min_disparity, num_disparities, window_size, p1, p2, disp_max_diff, prefilter_cap, uniqueness_ratio, speckle_window_size, speckle_range, full_dp);
     DisparitySlidingWindow DSW(world_width, world_height, aspect_ratio, min_width_image, max_width_image, class_id, nan_count, stddev, step_perc, class_type);
-
     // For all images
     for (size_t i = 0; i < files_left.size(); ++i){
 
@@ -285,7 +282,7 @@ int main(int argc, char** argv) {
 
                     // For all hypotheses calculate IoU and remember the best
                     for (size_t j = 0 ;j < hyps.size() ;++j) {
-                        float iou = intersectionOverUnion(gts[i].box.x1, gts[i].box.y1, gts[i].box.x2 - gts[i].box.x1, gts[i].box.y2 - gts[i].box.y1, hyps[j].x, hyps[j].y, hyps[j].w, hyps[j].h);
+                        float iou = intersectionOverUnion(gts[i].box.x1, gts[i].box.y1, gts[i].box.x2 - gts[i].box.x1, gts[i].box.y2 - gts[i].box.y1, hyps[j].x_, hyps[j].y_, hyps[j].w_, hyps[j].h_);
                         if ( iou > best_ov) {
                             best_ov = iou;
                             idx_best = j;
@@ -297,8 +294,8 @@ int main(int argc, char** argv) {
                         std::stringstream stream;
                         stream << std::fixed << std::setprecision(2) << best_ov;
                         std::string s = stream.str();
-                        cv::rectangle(img_left, cv::Rect(hyps[idx_best].x, hyps[idx_best].y, hyps[idx_best].w, hyps[idx_best].h), cv::Scalar(255, 255, 255),2);
-                        cv::putText(img_left, "Best IoU: " + s, cv::Point2d(hyps[idx_best].x  ,hyps[idx_best].y -5 ), CV_FONT_HERSHEY_PLAIN, 1,  cv::Scalar(0,255,0));
+                        cv::rectangle(img_left, cv::Rect(hyps[idx_best].x_, hyps[idx_best].y_, hyps[idx_best].w_, hyps[idx_best].h_), cv::Scalar(255, 255, 255),2);
+                        cv::putText(img_left, "Best IoU: " + s, cv::Point2d(hyps[idx_best].x_  ,hyps[idx_best].y_ -5 ), CV_FONT_HERSHEY_PLAIN, 1,  cv::Scalar(0,255,0));
                     }
                 }
             }

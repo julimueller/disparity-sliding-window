@@ -40,8 +40,8 @@ catch (const cv::Exception &e) \
 
 //===================   ERROR HANDLING     =========================================================
 
-static int failmsg(const char *fmt, ...);
-static PyObject* failmsgp(const char *fmt, ...);
+//static int failmsg(const char *fmt, ...);
+//static PyObject* failmsgp(const char *fmt, ...);
 
 //===================   THREADING     ==============================================================
 class PyAllowThreads;

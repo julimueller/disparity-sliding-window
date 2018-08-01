@@ -21,12 +21,15 @@ include_directories( ${Boost_INCLUDE_DIR} )
 INCLUDE_DIRECTORIES(include)
 
 # lib
-SET(SOURCES   src/disparity_sliding_window.cpp src/disparity_sliding_window_test.cpp src/disparity_sliding_window_python.cpp src/pyboost_cv2_converter.cpp)
-SET(HEADERS   include/disparity_sliding_window.h include/pyboost_cvconverter.hpp)
+SET(SOURCES   src/disparity_sliding_window.cpp src/disparity_sliding_window_test.cpp src/disparity_sliding_window_python.cpp src/pyboost_cv2_converter.cpp src/python_conversions.cpp)
+SET(HEADERS   include/disparity_sliding_window.h include/pyboost_cvconverter.hpp include/python_conversions.h)
 ADD_EXECUTABLE(disparity_sliding_window_test ${HEADERS} ${SOURCES})
 
 add_library(pyboost_cvconverter SHARED src/pyboost_cv2_converter.cpp include/pyboost_cvconverter.hpp)
 target_link_libraries(pyboost_cvconverter  ${Boost_LIBRARIES} ${OpenCV_LIBS} ${PYTHON_LIBRARIES})
+
+add_library(python_converter SHARED src/python_conversions.cpp include/python_conversions.h)
+target_link_libraries(python_converter ${Boost_LIBRARIES} ${OpenCV_LIBS} ${PYTHON_LIBRARIES})
 
 install(TARGETS pyboost_cvconverter ARCHIVE DESTINATION lib LIBRARY DESTINATION lib)
 install(FILES ${HEADERS} DESTINATION "include/disparity_sliding_window")
@@ -39,7 +42,7 @@ target_link_libraries(disparity_sliding_window_test ${OpenCV_LIBS} ${PYTHON_LIBR
 
 # Define the wrapper library that wraps our library
 add_library( dsw_python SHARED src/disparity_sliding_window_python.cpp )
-target_link_libraries( dsw_python ${PYTHON_LIBRARIES} ${Boost_LIBRARIES} pyboost_cvconverter disparity_sliding_window )
+target_link_libraries( dsw_python ${PYTHON_LIBRARIES} ${Boost_LIBRARIES} pyboost_cvconverter disparity_sliding_window python_converter )
 
 # don't prepend wrapper library name with lib
 set_target_properties( dsw_python PROPERTIES PREFIX "" )
