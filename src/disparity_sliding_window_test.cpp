@@ -268,7 +268,6 @@ int main(int argc, char** argv) {
             DSW.generate(disp, dst, hyps, tx);
             clock_t end = clock();
             double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
-
             std::cout << "Elapsed miliseconds: " << elapsed_secs * 1000.0 << std::endl;
             // Calculate overlap for all ground truths
             for (size_t i = 0; i < gts.size(); ++i) {

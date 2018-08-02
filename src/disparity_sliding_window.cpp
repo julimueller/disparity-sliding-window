@@ -24,7 +24,7 @@ DisparitySlidingWindow::DisparitySlidingWindow() {
 
     @param obj_width        Objects real world width in meters, e.g. 0.6 meters for pedestrians
     @param obj_height       Objects real world height in meters, e.g. 1.73 meters for pedestrians
-    @param hyp_aspect       Aspect ratio (pixels) of the object, e.g. 2-3 for pedestrians
+    @param hyp_aspect       Aspect ratio (pixels) of the object, e.g. 2-3 for pedestrians. ratio = height/width
     @param min_hyp_width    Minnimum proposal width in pixels
     @param max_hyp_width    Maximum proposal width in pixels
     @param hyp_class_id     Class identity, you can actually ignore this
@@ -180,7 +180,6 @@ void DisparitySlidingWindow::generate(const cv::Mat &disparity_image, cv::Mat &d
                 // Check if proposal larger than minimum width
                 if( hyp_.w_ > min_hyp_width_)
                 {
-
                     // Step size in percentage
                     step_x_adapt = std::floor(float(hyp_.w_ * step_perc_));
                     step_y_adapt = std::floor(float(hyp_.h_ * step_perc_));
@@ -197,9 +196,7 @@ void DisparitySlidingWindow::generate(const cv::Mat &disparity_image, cv::Mat &d
                     // Remember step size in y-direction in copy image
                     else {
                         for (int z = 0; z < step_y_adapt; z++) {
-
                             if (row + z + 1 < disparity_copy.rows) {
-
                                 disparity_copy.at<float>(row + z + 1,col) = nan_point;
                             }
                         }
@@ -211,11 +208,8 @@ void DisparitySlidingWindow::generate(const cv::Mat &disparity_image, cv::Mat &d
 
                     // Check if hyp is insinde image and hyp_width is in range(min,max)
                     if (hyp_.x_ > 0 && hyp_.y_ > 0  && ((hyp_.x_ + hyp_.w_) < disparity_image.cols) && ((hyp_.y_ + hyp_.h_) < disparity_image.rows) && (hyp_.w_ > min_hyp_width_) && (hyp_.w_ < max_hyp_width_)) {
-
                         // Check disparity in Hyp (6 Points)
                         inspectHypothesisDepth(disparity_image(cv::Rect(hyp_.x_,hyp_.y_,hyp_.w_,hyp_.h_)), stddev, nan_cnt);
-                        //stddev=0.;
-
                         if (stddev < max_stddev_ && nan_cnt <= max_nans_) {
                             // TODO: can we compute a confidence with nan_cnt and stddev?
                             hyp_.id_++;
