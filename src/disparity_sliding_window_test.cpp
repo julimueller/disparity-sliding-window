@@ -22,6 +22,7 @@ int getdir (std::string dir, std::vector<std::string> &files)
     struct dirent *dirp;
     if((dp  = opendir(dir.c_str())) == NULL) {
         std::cout << "Error(" << errno << ") opening " << dir << std::endl;
+        std::cout << "Did you download the KITTI dataset from http://www.cvlibs.net/datasets/kitti/eval_object.php?obj_benchmark=2d ? " << std::endl;
         return errno;
     }
     while ((dirp = readdir(dp)) != NULL) {
