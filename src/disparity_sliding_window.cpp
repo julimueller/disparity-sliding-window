@@ -56,7 +56,6 @@ DisparitySlidingWindow::DisparitySlidingWindow(const float &obj_width, const flo
     assert(hyp_.id_ >= 0 && "Hyp ID can't be negative!");
     std::stringstream ss;
     ss <<  "Max NaNs must be smaller " << std::to_string(NUM_HOMOGENEITY_POINTS) <<  " as we only use 6 values for homogeneity verficiation!";
-    std::cout << ss.str() << std::endl;
     assert(max_nans_ <= NUM_HOMOGENEITY_POINTS && ss.str().c_str());
     assert(max_nans_ >= 0 && "Max NaNs must be larger zero!");
     assert(max_stddev_ >= 0. && "Stddev threshold can't be negative!");
