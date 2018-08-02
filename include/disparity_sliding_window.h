@@ -16,6 +16,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "pyboost_cvconverter.hpp"
+#include <assert.h>
+
+#define NUM_HOMOGENEITY_POINTS 6
+
 
 class Rect {
 
@@ -88,7 +92,6 @@ private:
     std::vector<Rect> LUT_;
 
     int homogeneity_verification_method_;
-
 
 };
 

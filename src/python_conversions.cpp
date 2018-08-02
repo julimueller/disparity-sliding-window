@@ -1,5 +1,8 @@
 #include "python_conversions.h"
 
+/**
+    Constructor of PythonConversions
+*/
 PythonConversions::PythonConversions() {
 
 }
@@ -20,7 +23,6 @@ boost::python::object PythonConversions::toPythonList(std::vector<Rect> vector) 
         list.append(iter->w_);
         list.append(iter->h_);
     }
-
     return boost::python::object(list);
 }
 
@@ -166,7 +168,6 @@ std::vector<Rect> PythonConversions::PythonConversions::extractRects(boost::pyth
     }
     return vector;
 }
-
 
 
 /**

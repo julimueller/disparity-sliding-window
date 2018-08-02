@@ -13,6 +13,7 @@
 #include <opencv2/calib3d/calib3d.hpp>
 #include <fstream>
 
+
 /**
     Constructor of DisparitySlidingWindow
 */
@@ -50,6 +51,21 @@ DisparitySlidingWindow::DisparitySlidingWindow(const float &obj_width, const flo
     this->hyp_.id_ = 0;
     this->lut_adress_factor_ = 0;
     this->homogeneity_verification_method_ = class_type;
+
+    // Check parameter inputs
+    assert(hyp_.id_ >= 0 && "Hyp ID can't be negative!");
+    std::stringstream ss;
+    ss <<  "Max NaNs must be smaller " << std::to_string(NUM_HOMOGENEITY_POINTS) <<  " as we only use 6 values for homogeneity verficiation!";
+    std::cout << ss.str() << std::endl;
+    assert(max_nans_ <= NUM_HOMOGENEITY_POINTS && ss.str().c_str());
+    assert(max_nans_ >= 0 && "Max NaNs must be larger zero!");
+    assert(max_stddev_ >= 0. && "Stddev threshold can't be negative!");
+    assert(hyp_aspect_ > 0. && "Hyp aspect can't be negative!");
+    assert(min_hyp_width_ > 0 && "Min width can't be negative!");
+    assert(max_hyp_width_ > 0 && "Max width can't be negative!");
+    assert(obj_width_ > 0. && "Object width can't be negative!");
+    assert(obj_height_ > 0. && "Object height can't be negative!");
+    assert(step_perc_ > 0. && "Step stize can't be negative or zero!");
 }
 
 /**
@@ -108,7 +124,6 @@ bool DisparitySlidingWindow::initLookUpTable(const float &tx, const cv::Mat &cam
 
         // calculate depth in meters
         tvec.at<float>(2,0) = -1.* tx / (disparity);
-
         // project
         cv::projectPoints(object_points, rvec, tvec, camera_matrix, distortion_matrix, image_points);
         // TODO: this assumes that the object is at the image center, it would be a better to use the matching ray!
@@ -141,13 +156,13 @@ void DisparitySlidingWindow::generate(const cv::Mat &disparity_image, cv::Mat &d
 
     // check if we're ready to generate
     if (LUT_.size() == 0 || lut_adress_factor_ == 0) {
-        std::cout << "ERROR:\tYou must call 'calculateLookUpTable' before calling 'generate'!" << std::endl;
+        std::cerr << "ERROR:\tYou must call 'calculateLookUpTable' before calling 'generate'!" << std::endl;
         return;
     }
 
     // check if disparity image is of type float
     if (disparity_image.type() != CV_32FC1) {
-        std::cout << "ERROR:\tWe expect a float image as an input!" << std::endl;
+        std::cerr << "ERROR:\tWe expect a float image as an input!" << std::endl;
         return;
     }
 
@@ -267,7 +282,7 @@ void DisparitySlidingWindow::inspectHypothesisDepth(const cv::Mat &hyp, float &s
             int c_y = hyp.rows/2;
             int w = hyp.cols/4;
             int h = hyp.rows/4;
-            float selected_points[6] = {
+            float selected_points[NUM_HOMOGENEITY_POINTS] = {
                 hyp.at<float>(c_y,c_x-w),
                 hyp.at<float>(c_y,c_x+w),
                 hyp.at<float>(c_y+h,c_x-w),
@@ -281,7 +296,7 @@ void DisparitySlidingWindow::inspectHypothesisDepth(const cv::Mat &hyp, float &s
             float mean;
 
             // first run: check nan/inf and calc sum
-            for (size_t i = 0; i < 6; i++) {
+            for (size_t i = 0; i < NUM_HOMOGENEITY_POINTS; i++) {
                 if (!(std::isnan(selected_points[i])) && std::isfinite(selected_points[i])) {
                     sum += selected_points[i];
                     ++cnt;
@@ -294,7 +309,7 @@ void DisparitySlidingWindow::inspectHypothesisDepth(const cv::Mat &hyp, float &s
             mean = sum/(float)cnt;
             sum = 0;
             cnt = 0;
-            for (size_t i = 0; i < 6; i++) {
+            for (size_t i = 0; i < NUM_HOMOGENEITY_POINTS; i++) {
                 if (!(std::isnan(selected_points[i])) && std::isfinite(selected_points[i])) {
                     sum += std::pow(selected_points[i]-mean,2);
                     ++cnt;
@@ -323,7 +338,7 @@ void DisparitySlidingWindow::inspectHypothesisDepth(const cv::Mat &hyp, float &s
             int c_y = hyp_crop.rows/2;
             int w = hyp_crop.cols/4;
             int h = hyp_crop.rows/4;
-            float selected_points[6] = {
+            float selected_points[NUM_HOMOGENEITY_POINTS] = {
                 hyp_crop.at<float>(c_y,c_x-w),
                 hyp_crop.at<float>(c_y,c_x+w),
                 hyp_crop.at<float>(c_y+h,c_x-w),
@@ -337,7 +352,7 @@ void DisparitySlidingWindow::inspectHypothesisDepth(const cv::Mat &hyp, float &s
             float mean;
 
             // first run: check nan/inf and calc sum
-            for (size_t i = 0; i < 6; i++) {
+            for (size_t i = 0; i < NUM_HOMOGENEITY_POINTS; i++) {
                 if (!(std::isnan(selected_points[i])) && std::isfinite(selected_points[i])) {
                     sum += selected_points[i];
                     ++cnt;
@@ -350,7 +365,7 @@ void DisparitySlidingWindow::inspectHypothesisDepth(const cv::Mat &hyp, float &s
             mean = sum/(float)cnt;
             sum = 0;
             cnt = 0;
-            for (size_t i = 0; i < 6; i++) {
+            for (size_t i = 0; i < NUM_HOMOGENEITY_POINTS; i++) {
                 if (!(std::isnan(selected_points[i])) && std::isfinite(selected_points[i])) {
                     sum += std::pow(selected_points[i]-mean,2);
                     ++cnt;
@@ -368,48 +383,59 @@ void DisparitySlidingWindow::inspectHypothesisDepth(const cv::Mat &hyp, float &s
 
 }
 
-
-
 /**
     setXXX      Member setter, self-descriptive
 
 */
 void DisparitySlidingWindow::setHypClassId(const int &id) {
-    hyp_.classId_ = id;
+    hyp_.classId_ = std::to_string(id);
 }
 
 void DisparitySlidingWindow::setHypCounter(const size_t &cnt) {
     hyp_.id_ = cnt;
+    assert(hyp_.id_ >= 0 && "Hyp ID can't be negative!");
 }
 
 void DisparitySlidingWindow::setMaxNans(const size_t &cnt) {
     max_nans_ = cnt;
+    std::stringstream ss;
+    ss <<  "Max NaNs must be smaller " << std::to_string(NUM_HOMOGENEITY_POINTS) <<  " as we only use 6 values for homogeneity verficiation!";
+    std::cout << ss.str() << std::endl;
+    assert(max_nans_ <= NUM_HOMOGENEITY_POINTS && ss.str().c_str());
+    assert(max_nans_ >= 0 && "Max NaNs must be larger zero!");
 }
 
 void DisparitySlidingWindow::setMaxStddev(const float &val) {
     max_stddev_ = val;
+    assert(max_stddev_ >= 0. && "Stddev threshold can't be negative!");
 }
 
 void DisparitySlidingWindow::setHypAspect(const float &aspect) {
     hyp_aspect_ = aspect;
+    assert(hyp_aspect_ > 0. && "Hyp aspect can't be negative!");
 }
 
 void DisparitySlidingWindow::setMinHypWidth(const int &min_w) {
     min_hyp_width_ = min_w;
+    assert(min_hyp_width_ > 0 && "Min width can't be negative!");
 }
 
 void DisparitySlidingWindow::setMaxHypWidth(const int &max_w) {
     max_hyp_width_ = max_w;
+    assert(max_hyp_width_ > 0 && "Max width can't be negative!");
 }
 
 void DisparitySlidingWindow::setObjWidth(const float &val) {
     obj_width_ = val;
+    assert(obj_width_ > 0. && "Object width can't be negative!");
 }
 
 void DisparitySlidingWindow::setObjHeight(const float &val) {
     obj_height_ = val;
+    assert(obj_height_ > 0. && "Object height can't be negative!");
 }
 
 void DisparitySlidingWindow::setStepPercentage(const float &val) {
     step_perc_ = val;
+    assert(step_perc_ > 0. && "Step stize can't be negative or zero!");
 }
