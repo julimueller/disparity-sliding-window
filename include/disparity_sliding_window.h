@@ -19,7 +19,10 @@
 #include <assert.h>
 
 #define NUM_HOMOGENEITY_POINTS 6
-
+#define STEP_X_MIN 1
+#define STEP_Y_MIN 1
+#define ROT_VEC_LEN 3
+#define TRANS_VEC_LEN 3
 
 class Rect {
 

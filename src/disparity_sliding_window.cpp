@@ -114,8 +114,8 @@ bool DisparitySlidingWindow::initLookUpTable(const float &tx, const cv::Mat &cam
 
     // prepare other data for cv::projectPoints
     std::vector<cv::Point2f> image_points;
-    cv::Mat_<float> tvec = (cv::Mat_<float>(3,1) << 0., 0., 0.);
-    cv::Mat_<float> rvec = (cv::Mat_<float>(3,1) << 0., 0., 0.);
+    cv::Mat_<float> tvec = (cv::Mat_<float>(TRANS_VEC_LEN,1) << 0., 0., 0.);
+    cv::Mat_<float> rvec = (cv::Mat_<float>(ROT_VEC_LEN,1) << 0., 0., 0.);
 
 
     Rect hyp;
@@ -200,12 +200,12 @@ void DisparitySlidingWindow::generate(const cv::Mat &disparity_image, cv::Mat &d
                     step_y_adapt = std::floor(float(hyp_.h_ * step_perc_));
 
                     // Step size must be >= 1
-                   if (step_x_adapt < 1) {
-                        step_x_adapt = 1;
+                   if (step_x_adapt < STEP_X_MIN) {
+                        step_x_adapt = STEP_X_MIN;
                     }
 
-                    if (step_y_adapt < 1) {
-                        step_y_adapt = 1;
+                    if (step_y_adapt < STEP_Y_MIN) {
+                        step_y_adapt = STEP_Y_MIN;
                     }
 
                     // Remember step size in y-direction in copy image
