@@ -13,14 +13,15 @@
 #include <opencv2/calib3d/calib3d.hpp>
 #include <fstream>
 
-
-
+/**
+    Constructor of DisparitySlidingWindow
+*/
 DisparitySlidingWindow::DisparitySlidingWindow() {
 
 }
 
 /**
-    Constructor of DisparitySlidingWindow
+    Overloaded Constructor of DisparitySlidingWindow
 
     @param obj_width        Objects real world width in meters, e.g. 0.6 meters for pedestrians
     @param obj_height       Objects real world height in meters, e.g. 1.73 meters for pedestrians
@@ -257,7 +258,6 @@ void DisparitySlidingWindow::inspectHypothesisDepth(const cv::Mat &hyp, float &s
 
         case HOMOGENEITY_VERIFICATION::TRAFFIC_LIGHT: {
 
-
             // reset output vars
             nan_count = 0;
             stddev = 0.;
@@ -307,15 +307,12 @@ void DisparitySlidingWindow::inspectHypothesisDepth(const cv::Mat &hyp, float &s
         // pedestrians bounding boxes contain background disparities at boundaries: only use a small region in the middle for homogeneity calculation
         case HOMOGENEITY_VERIFICATION::PEDESTRIAN: {
 
-
             int center_x = hyp.cols/2 - hyp.cols /6;
             int center_y = hyp.rows/2 - hyp.rows/6;
             int width = hyp.cols/3;
             int height = hyp.rows/3;
 
-
             cv::Mat hyp_crop = hyp(cv::Rect(center_x, center_y, width, height));
-
 
             // reset output vars
             nan_count = 0;
