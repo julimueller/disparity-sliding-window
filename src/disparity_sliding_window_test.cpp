@@ -165,17 +165,18 @@ float intersectionOverUnion(const int &labelX, const int &labelY, const int &lab
 
 int main(int argc, char** argv) {
 
+    std::vector<std::string> files_left;
+    cv::Mat img_left, img_right, disp;
+
     // Download the KITTI object detection dataset (http://www.cvlibs.net/datasets/kitti/eval_object.php?obj_benchmark=2d) and modify path
     std::string left_img_dir = "/scratch/fs2/KITTI/data_object_image_2/training/image_2/";
     std::string right_img_dir = "/scratch/fs2/KITTI/data_object_image_3/training/image_3/";
     std::string calib_dir = "/scratch/fs2/KITTI/data_object_calib/training/calib/";
     std::string label_dir = "/scratch/fs2/KITTI/training/label_2/";
 
-    std::vector<std::string> files_left;
 
     getdir(left_img_dir,files_left);
 
-    cv::Mat img_left, img_right, disp, disp_viz;
 
     // sort files by number
     std::sort(files_left.begin(), files_left.end());
@@ -194,15 +195,25 @@ int main(int argc, char** argv) {
     bool full_dp = false;
 
     // Parameters for DSW
+    // Real world width of a pedestrian (average assumption)
     float world_width = 0.6;
+    // Real world height of a pedestrian (average assumption)
     float world_height = 1.73;
+    // Aspect ratio in real world
     float aspect_ratio = 2.88;
+    // Minimum detection width in pixels
     int min_width_image = 10;
+    // Minimum detection width in pixels
     int max_width_image = 200;
+    // Class ID is not important in this case. Could be used to "identify" different classes
     int class_id = 10;
+    // We use 6 values of each rectangle for homogeneity verification and reject a hypotheses if number of NaNs is larger nan_count
     size_t nan_count = 4;
+    // We reject a rectangle if stddev of homogeneity verification is larger than stddev
     float stddev = 1.0;
+    // Adaptive step size. If element at position is 10 pixels in width, we jump 0.3*10= 3 pixels. Derivation see paper
     float step_perc = 0.3;
+    // We use different ways to calculate homogeneity based on the class. Just an optimization because different classes do not "fill" the whole rectangle, e.g. traffic lights almost do because they are rectangular in 3D, but humans are not
     int class_type = DisparitySlidingWindow::HOMOGENEITY_VERIFICATION::PEDESTRIAN;
 
 
@@ -265,22 +276,22 @@ int main(int argc, char** argv) {
             DSW.initLookUpTable(tx, K, dist, 0, 114, 1./16. );
             cv::Mat dst;
             std::vector<Rect> hyps;
+
+            // We measure the runtime of the algorithm (without disparity map calculation)
             clock_t begin = clock();
             DSW.generate(disp, dst, hyps, tx);
             clock_t end = clock();
             double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
-            std::cout << "Elapsed miliseconds: " << elapsed_secs * 1000.0 << std::endl;
+            std::cout << "Elapsed miliseconds per image: " << elapsed_secs * 1000.0 << std::endl;
             // Calculate overlap for all ground truths
             for (size_t i = 0; i < gts.size(); ++i) {
-
-                // Only do pedestrians
+                // Only show images containing pedestrians
                 if (gts[i].box.type == "Pedestrian") {
                     cv::rectangle(img_left, cv::Rect(gts[i].box.x1, gts[i].box.y1, gts[i].box.x2 - gts[i].box.x1, gts[i].box.y2 -gts[i].box.y1), cv::Scalar(0, 255, 0), 2);
-
                     float best_ov = 0.0;
                     int idx_best = 0;
 
-                    // For all hypotheses calculate IoU and remember the best
+                    // For all hypotheses calculate IoU and save the highest overlap
                     for (size_t j = 0 ;j < hyps.size() ;++j) {
                         float iou = intersectionOverUnion(gts[i].box.x1, gts[i].box.y1, gts[i].box.x2 - gts[i].box.x1, gts[i].box.y2 - gts[i].box.y1, hyps[j].x_, hyps[j].y_, hyps[j].w_, hyps[j].h_);
                         if ( iou > best_ov) {
@@ -289,7 +300,7 @@ int main(int argc, char** argv) {
                         }
 
                     }
-                    // Visualize
+                    // Visualize best overlap
                     if (best_ov > 0.0) {
                         std::stringstream stream;
                         stream << std::fixed << std::setprecision(2) << best_ov;
@@ -300,14 +311,13 @@ int main(int argc, char** argv) {
                 }
             }
 
-            // Visualize
+            // Draw number of proposals in image and show image
             cv::putText(img_left, "Number of Proposals: " + std::to_string(hyps.size()), cv::Point2d(20, 350 ), CV_FONT_HERSHEY_PLAIN, 2,  cv::Scalar(0,255,0));
             cv::imshow("", img_left);
             cv::waitKey(0);
         }
 
     }
-
     return 0;
 
 }
