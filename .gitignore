@@ -4,3 +4,5 @@ lib
 dsw-private
 *.*user
 *.*~
+*.autosave
+*.orig
