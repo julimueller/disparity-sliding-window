@@ -105,7 +105,6 @@ def bb_intersection_over_union( label, hyp):
     den = float(union(label, hyp))
     # intersection/union
     iou = num / den
-
     # return the intersection over union value
     return iou              
 
@@ -175,12 +174,12 @@ if __name__ == "__main__":
     hypMinWidth = 10
     hypMaxWidth = 200
     hypClassId = 10
-    maxNans = 6
-    maxStddev = 0.05
+    maxNans = 4
+    maxStddev = 0.1
     stepPerc = 0.3
     homogeneity_method = 1
 
-    dsw = dsw_python.DisparitySlidingWindow(objectWidth, objectHeight, hypAspect, hypMinWidth, hypMaxWidth, hypClassId, maxNans, maxStddev, stepPerc, homogeneity_method)
+    dsw = dsw_python.DisparitySlidingWindowWrapper(objectWidth, objectHeight, hypAspect, hypMinWidth, hypMaxWidth, hypClassId, maxNans, maxStddev, stepPerc, homogeneity_method)
 
     # for each frame 
     for label_path, left_img_path, right_img_path, calib_path, disp_path in zip(labelPathList, leftImgPathList, rightImgPathList, calibPathList, dispPathList):
@@ -214,12 +213,11 @@ if __name__ == "__main__":
             # init lookup-table
             dist = np.zeros((5,1))
             rect_list = np.zeros((4,319))               
-            dsw.initLookUpTable(calib.tx, calib.k_left, dist, 0, 114, 1./16. )
+            dsw.initLookUpTable(calib.tx, calib.k_left, dist, 0., 114., 1./16. )
             
             # do DSW und return rect list of ints
             hyps_list = []
             rect_list = dsw.generate_py(disparity, calib.tx)
-
             # Go through all labels in file
             for l in label_list:
                 # We only evaluate pedestrians
@@ -229,23 +227,23 @@ if __name__ == "__main__":
                     cv2.rectangle(img_left, (l.x, l.y), (l.x + l.w, l.y + l.h), (255,255,255), 2)
 
                     # find proposal with best overlap
-                    for i in xrange(0, len(rect_list), 4):
+                    for idx,i in enumerate(rect_list):
                         h=Hyp()
-                        h.x = rect_list[i]
-                        h.y = rect_list[i+1]
-                        h.w = rect_list[i+2] 
-                        h.h = rect_list[i+3]
+                        h.x = i[0]
+                        h.y = i[1]
+                        h.w = int(i[2])
+                        h.h = int(i[3])
                         iou = bb_intersection_over_union(l,h)
                         if iou > best_ov:
                             best_ov = iou
-                            best_idx = i
+                            best_idx = idx
                     # plot best overlap
                     if best_idx is not -1:
                         l.best_overlap = best_ov
-                        best_x = rect_list[best_idx]
-                        best_y = rect_list[best_idx+1]
-                        best_w = rect_list[best_idx+2]
-                        best_h = rect_list[best_idx+3]
+                        best_x = rect_list[best_idx][0]
+                        best_y = rect_list[best_idx][1]
+                        best_w = int(rect_list[best_idx][2])
+                        best_h = int(rect_list[best_idx][3])
                         cv2.rectangle(img_left, (best_x, best_y), (best_x + best_w, best_y + best_h), (0,255,0), 2)
             # show image
             cv2.imshow("Results DSW", img_left)
